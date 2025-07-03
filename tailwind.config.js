@@ -1,6 +1,8 @@
-export default {
-  content: ["./index.html", "./src/**/*.{js,jsx,ts,tsx}"],
-  darkMode: "class",
+module.exports = {
+  content: [
+    "./index.html",
+    "./src/**/*.{js,jsx}"
+  ],
   theme: {
     extend: {},
   },
