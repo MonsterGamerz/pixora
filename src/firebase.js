@@ -1,21 +1,22 @@
 // src/firebase.js
-import { initializeApp } from 'firebase/app'
-import { getFirestore } from 'firebase/firestore'
-import { getAuth, GoogleAuthProvider } from 'firebase/auth'
-import { getStorage } from 'firebase/storage'
+
+import { initializeApp } from "firebase/app"
+import { getFirestore } from "firebase/firestore"
+import { getStorage } from "firebase/storage"
+import { getAuth, GoogleAuthProvider } from "firebase/auth"
 
 const firebaseConfig = {
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
-  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
-  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
-  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
-  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
-  appId: import.meta.env.VITE_FIREBASE_APP_ID
+  apiKey: "AIzaSyD_C_sauX1gF1fLtoSiuG2p7LzC9jwi3I8",
+  authDomain: "pixora-90444.firebaseapp.com",
+  projectId: "pixora-90444",
+  storageBucket: "pixora-90444.appspot.com", // 🔧 fix here (was wrong in your snippet)
+  messagingSenderId: "317901408418",
+  appId: "1:317901408418:web:59955b78c184503ccd6ffb"
 }
 
 const app = initializeApp(firebaseConfig)
 
 export const db = getFirestore(app)
+export const storage = getStorage(app)
 export const auth = getAuth(app)
 export const provider = new GoogleAuthProvider()
-export const storage = getStorage(app)
