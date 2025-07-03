@@ -2,8 +2,13 @@ import React from 'react'
 
 const App = () => {
   return (
-    <div style={{ color: 'green', fontSize: 32, padding: 20 }}>
-      Pixora is LIVE ✅
+    <div style={{
+      fontSize: '2rem',
+      color: '#10b981',
+      textAlign: 'center',
+      marginTop: '20vh',
+    }}>
+      ✅ Pixora is LIVE and React is working!
     </div>
   )
 }
