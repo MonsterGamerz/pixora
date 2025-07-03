@@ -1,7 +1,7 @@
 import React from 'react'
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
 
-// Page imports
+// Import Pages
 import Home from './pages/Home'
 import Upload from './pages/Upload'
 import Reels from './pages/Reels'
@@ -13,17 +13,14 @@ import Signup from './pages/Signup'
 import Profile from './pages/Profile'
 import StoryUpload from './pages/StoryUpload'
 
-// Component imports
+// Import Components
 import BottomNav from './components/BottomNav'
 import ToggleTheme from './components/ToggleTheme'
 
 const App = () => {
   return (
     <Router>
-      {/* Toggle dark/light theme */}
       <ToggleTheme />
-
-      {/* Page routing */}
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/upload" element={<Upload />} />
@@ -36,8 +33,6 @@ const App = () => {
         <Route path="/profile" element={<Profile />} />
         <Route path="/story-upload" element={<StoryUpload />} />
       </Routes>
-
-      {/* Always visible bottom nav */}
       <BottomNav />
     </Router>
   )
