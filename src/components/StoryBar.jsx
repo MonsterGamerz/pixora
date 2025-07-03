@@ -1,4 +1,3 @@
-// src/components/StoryBar.jsx
 import React, { useEffect, useState } from 'react'
 import { collection, getDocs, query, orderBy } from 'firebase/firestore'
 import { db } from '../firebase'
@@ -10,16 +9,22 @@ export default function StoryBar() {
 
   useEffect(() => {
     const fetchStories = async () => {
+      const now = new Date()
       const snap = await getDocs(query(collection(db, 'stories'), orderBy('timestamp', 'desc')))
       const unique = []
       const seen = new Set()
-      snap.docs.forEach(doc => {
-        const data = doc.data()
-        if (!seen.has(data.uid)) {
+
+      snap.docs.forEach(docSnap => {
+        const data = docSnap.data()
+        const storyTime = data.timestamp?.toDate()
+        // compute hours since posted
+        const hoursSince = (now - storyTime) / (1000 * 60 * 60)
+        if (hoursSince <= 24 && !seen.has(data.uid)) {
           seen.add(data.uid)
-          unique.push({ id: doc.id, ...data })
+          unique.push({ id: docSnap.id, ...data })
         }
       })
+
       setStories(unique)
     }
 
@@ -27,7 +32,7 @@ export default function StoryBar() {
   }, [])
 
   return (
-    <div className="flex overflow-x-auto gap-4 px-2 py-2 border-b">
+    <div className="flex overflow-x-auto gap-4 px-2 py-2 border-b no-scrollbar">
       {stories.map(story => (
         <div
           key={story.id}
@@ -36,6 +41,7 @@ export default function StoryBar() {
         >
           <img
             src={story.userPic}
+            alt={`${story.username}’s story`}
             className="h-16 w-16 rounded-full border-2 border-pink-500 object-cover"
           />
           <p className="text-xs mt-1">{story.username}</p>
