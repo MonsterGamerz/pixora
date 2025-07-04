@@ -1,30 +1,77 @@
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-import Home from './pages/Home';
-import Reels from './pages/Reels';
-import Upload from './pages/Upload';
-import Chat from './pages/Chat';
-import Signup from './pages/Signup';
-import Login from './pages/Login';
-import Profile from './pages/Profile';
-import BottomNav from './components/BottomNav';
+import React, { useEffect, useState } from 'react'
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
+import { onAuthStateChanged } from 'firebase/auth'
+import { auth } from './firebase'
 
-function App() {
+import Home from './pages/Home'
+import Login from './pages/Login'
+import Signup from './pages/Signup'
+import Upload from './pages/Upload'
+import Reels from './pages/Reels'
+import Profile from './pages/Profile'
+import Chat from './pages/Chat'
+import BottomNav from './components/BottomNav'
+import PrivateRoute from './components/PrivateRoute'
+
+export default function App() {
+  const [user, setUser] = useState(null)
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      setUser(user)
+    })
+    return () => unsubscribe()
+  }, [])
+
   return (
     <Router>
-      <div className="pb-16">
-        <Routes>
-          <Route path="/" element={<Home />} />
-          <Route path="/reels" element={<Reels />} />
-          <Route path="/upload" element={<Upload />} />
-          <Route path="/chat" element={<Chat />} />
-          <Route path="/signup" element={<Signup />} />
-          <Route path="/login" element={<Login />} />
-          <Route path="/profile/:uid" element={<Profile />} />
-        </Routes>
-      </div>
-      <BottomNav />
-    </Router>
-  );
-}
+      {user && <BottomNav />}
+      <Routes>
+        <Route path="/login" element={<Login />} />
+        <Route path="/signup" element={<Signup />} />
 
-export default App;
+        {/* All the routes below require login */}
+        <Route
+          path="/"
+          element={
+            <PrivateRoute>
+              <Home />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/upload"
+          element={
+            <PrivateRoute>
+              <Upload />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/reels"
+          element={
+            <PrivateRoute>
+              <Reels />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/profile/:uid"
+          element={
+            <PrivateRoute>
+              <Profile />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/chat"
+          element={
+            <PrivateRoute>
+              <Chat />
+            </PrivateRoute>
+          }
+        />
+      </Routes>
+    </Router>
+  )
+}
