@@ -7,7 +7,7 @@ import Reels from "./pages/Reels";
 import Profile from "./pages/Profile";
 import Navbar from "./components/Navbar";
 import StoryBar from "./components/StoryBar";
-import AI from "./pages/AI"; // Your AI assistant page
+import Assistant from "./pages/Assistant"; // Your AI assistant page
 
 function App() {
   return (
