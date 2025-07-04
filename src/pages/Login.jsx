@@ -1,34 +1,26 @@
-// src/pages/Login.jsx
-import React, { useState } from 'react'
-import { auth } from '../firebase'
-import { signInWithEmailAndPassword } from 'firebase/auth'
-import { useNavigate } from 'react-router-dom'
+import { useState } from 'react';
+import { signInWithEmailAndPassword } from 'firebase/auth';
+import { auth } from '../firebase';
 
 export default function Login() {
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
-  const [error, setError] = useState('')
-  const navigate = useNavigate()
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
 
-  const loginUser = async (e) => {
-    e.preventDefault()
+  const login = async () => {
     try {
-      await signInWithEmailAndPassword(auth, email, password)
-      navigate('/') // Redirect after login
+      await signInWithEmailAndPassword(auth, email, password);
+      alert("Logged in!");
     } catch (err) {
-      setError(err.message)
+      alert(err.message);
     }
-  }
+  };
 
   return (
-    <div className="p-4 max-w-md mx-auto">
-      <h1 className="text-2xl font-bold mb-4">Login</h1>
-      <form onSubmit={loginUser} className="flex flex-col gap-3">
-        <input type="email" placeholder="Email" className="p-2 border" value={email} onChange={(e) => setEmail(e.target.value)} />
-        <input type="password" placeholder="Password" className="p-2 border" value={password} onChange={(e) => setPassword(e.target.value)} />
-        <button type="submit" className="bg-blue-600 text-white p-2 rounded">Login</button>
-      </form>
-      {error && <p className="text-red-500 mt-2">{error}</p>}
+    <div className="p-4">
+      <h2>Login</h2>
+      <input value={email} onChange={e => setEmail(e.target.value)} placeholder="Email" />
+      <input value={password} onChange={e => setPassword(e.target.value)} placeholder="Password" type="password" />
+      <button onClick={login}>Login</button>
     </div>
-  )
+  );
 }
