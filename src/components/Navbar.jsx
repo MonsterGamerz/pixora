@@ -2,9 +2,9 @@ import React from "react";
 
 function Navbar() {
   return (
-    <nav className="bg-gray-900 text-white p-4">
-      <h1 className="text-xl font-bold">Pixora</h1>
-    </nav>
+    <div className="bg-black text-white p-4 text-center">
+      <h1 className="text-lg font-semibold">Pixora</h1>
+    </div>
   );
 }
 
