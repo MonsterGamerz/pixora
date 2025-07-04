@@ -1,6 +1,6 @@
 // src/pages/Assistant.jsx
 import React, { useState } from 'react'
-import axios from 'axios'
+import axios from "axios";
 
 export default function Assistant() {
   const [input, setInput] = useState('')
