@@ -1,52 +1,50 @@
-import React, { useEffect, useState } from 'react'
-import { collection, getDocs, query, orderBy } from 'firebase/firestore'
-import { db } from '../firebase'
-import { useNavigate } from 'react-router-dom'
+import React, { useEffect, useState } from "react"
+import { collection, onSnapshot, orderBy, query } from "firebase/firestore"
+import { db } from "../firebase"
+import { useNavigate } from "react-router-dom"
 
-export default function StoryBar() {
+function StoryBar() {
   const [stories, setStories] = useState([])
   const navigate = useNavigate()
 
   useEffect(() => {
-    const fetchStories = async () => {
-      const now = new Date()
-      const snap = await getDocs(query(collection(db, 'stories'), orderBy('timestamp', 'desc')))
-      const unique = []
-      const seen = new Set()
+    const q = query(collection(db, "stories"), orderBy("timestamp", "desc"))
 
-      snap.docs.forEach(docSnap => {
-        const data = docSnap.data()
-        const storyTime = data.timestamp?.toDate()
-        // compute hours since posted
-        const hoursSince = (now - storyTime) / (1000 * 60 * 60)
-        if (hoursSince <= 24 && !seen.has(data.uid)) {
-          seen.add(data.uid)
-          unique.push({ id: docSnap.id, ...data })
-        }
-      })
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const current = new Date()
+      const validStories = snapshot.docs
+        .map(doc => ({ id: doc.id, ...doc.data() }))
+        .filter(story => {
+          const createdAt = story.timestamp?.toDate?.()
+          return createdAt && current - createdAt <= 86400000 // 24hr check
+        })
 
-      setStories(unique)
-    }
+      setStories(validStories)
+    })
 
-    fetchStories()
+    return () => unsubscribe()
   }, [])
 
   return (
-    <div className="flex overflow-x-auto gap-4 px-2 py-2 border-b no-scrollbar">
-      {stories.map(story => (
+    <div className="flex space-x-3 overflow-x-auto p-2 bg-black">
+      {stories.map((story) => (
         <div
           key={story.id}
-          onClick={() => navigate(`/story/${story.uid}`)}
-          className="flex flex-col items-center cursor-pointer"
+          onClick={() => navigate(`/story/${story.id}`)}
+          className="cursor-pointer flex flex-col items-center"
         >
           <img
-            src={story.userPic}
-            alt={`${story.username}’s story`}
-            className="h-16 w-16 rounded-full border-2 border-pink-500 object-cover"
+            src={story.imageUrl}
+            alt="story"
+            className="w-14 h-14 rounded-full border-2 border-pink-500 object-cover"
           />
-          <p className="text-xs mt-1">{story.username}</p>
+          <p className="text-white text-xs mt-1 truncate w-14 text-center">
+            {story.username || "User"}
+          </p>
         </div>
       ))}
     </div>
   )
 }
+
+export default StoryBar
