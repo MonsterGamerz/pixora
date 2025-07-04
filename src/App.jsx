@@ -1,27 +1,29 @@
-import React from "react";
-import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
-import Home from "./pages/Home";
-import Upload from "./pages/Upload";
-import Chat from "./pages/Chat";
-import Reels from "./pages/Reels";
-import Profile from "./pages/Profile";
-import Navbar from "./components/Navbar";
-import StoryBar from "./components/StoryBar";
+// src/App.jsx
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import Home from './pages/Home';
+import Signup from './pages/Signup';
+import Login from './pages/Login';
+import Upload from './pages/Upload';
+import Profile from './pages/Profile';
+import Reels from './pages/Reels';
+import Chat from './pages/Chat';
+import Navbar from './components/Navbar';
+import BottomNav from './components/BottomNav';
 
 function App() {
   return (
     <Router>
-      <div className="bg-black text-white min-h-screen">
-        <Navbar />
-        <StoryBar />
-        <Routes>
-          <Route path="/" element={<Home />} />
-          <Route path="/upload" element={<Upload />} />
-          <Route path="/chat" element={<Chat />} />
-          <Route path="/reels" element={<Reels />} />
-          <Route path="/profile" element={<Profile />} />
-        </Routes>
-      </div>
+      <Navbar />
+      <Routes>
+        <Route path="/" element={<Home />} />
+        <Route path="/signup" element={<Signup />} />
+        <Route path="/login" element={<Login />} />
+        <Route path="/upload" element={<Upload />} />
+        <Route path="/profile/:uid" element={<Profile />} />
+        <Route path="/reels" element={<Reels />} />
+        <Route path="/chat" element={<Chat />} />
+      </Routes>
+      <BottomNav />
     </Router>
   );
 }
