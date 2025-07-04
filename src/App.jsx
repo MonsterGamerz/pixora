@@ -2,24 +2,28 @@ import React from "react";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import Home from "./pages/Home";
 import Upload from "./pages/Upload";
-import StoryPage from "./pages/StoryPage";
-import ReelPage from "./pages/ReelPage";
-import ChatPage from "./pages/ChatPage";
-import AssistantPage from "./pages/AssistantPage";
+import Chat from "./pages/Chat";
+import Reels from "./pages/Reels";
+import Profile from "./pages/Profile";
 import Navbar from "./components/Navbar";
+import StoryBar from "./components/StoryBar";
+import AI from "./pages/AI"; // Your AI assistant page
 
 function App() {
   return (
     <Router>
-      <Navbar />
-      <Routes>
-        <Route path="/" element={<Home />} />
-        <Route path="/upload" element={<Upload />} />
-        <Route path="/stories" element={<StoryPage />} />
-        <Route path="/reels" element={<ReelPage />} />
-        <Route path="/chat" element={<ChatPage />} />
-        <Route path="/ai" element={<AssistantPage />} />
-      </Routes>
+      <div className="bg-black text-white min-h-screen">
+        <Navbar />
+        <StoryBar />
+        <Routes>
+          <Route path="/" element={<Home />} />
+          <Route path="/upload" element={<Upload />} />
+          <Route path="/chat" element={<Chat />} />
+          <Route path="/reels" element={<Reels />} />
+          <Route path="/profile" element={<Profile />} />
+          <Route path="/ai" element={<AI />} />
+        </Routes>
+      </div>
     </Router>
   );
 }
