@@ -7,7 +7,6 @@ import Reels from "./pages/Reels";
 import Profile from "./pages/Profile";
 import Navbar from "./components/Navbar";
 import StoryBar from "./components/StoryBar";
-import Assistant from "./pages/Assistant"; // Your AI assistant page
 
 function App() {
   return (
@@ -21,7 +20,6 @@ function App() {
           <Route path="/chat" element={<Chat />} />
           <Route path="/reels" element={<Reels />} />
           <Route path="/profile" element={<Profile />} />
-          <Route path="/ai" element={<AI />} />
         </Routes>
       </div>
     </Router>
