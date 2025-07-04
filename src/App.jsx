@@ -1,30 +1,27 @@
-import { db, storage, auth } from './firebase'
-import React from 'react'
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
-import Home from './pages/Home'
-import Upload from './pages/Upload'
-import StoryUpload from './pages/StoryUpload'
-import StoryViewer from './pages/StoryViewer'
-import ToggleTheme from './components/ToggleTheme'
-import BottomNav from './components/BottomNav'
-import { ThemeProvider } from './ThemeContext'
+import React from "react"
+import { BrowserRouter as Router, Routes, Route } from "react-router-dom"
+import Home from "./pages/Home"  // Make sure this exists and renders something
+import Upload from "./pages/Upload"
+import StoryViewer from "./pages/StoryViewer"
+import Reels from "./pages/Reels"
+import BottomNav from "./components/BottomNav"
+import ToggleTheme from "./components/ToggleTheme"
 
-export default function App() {
+function App() {
   return (
-    <ThemeProvider>
-      <div className="min-h-screen bg-white dark:bg-gray-900 text-black dark:text-white transition-colors duration-300">
-        <Router>
-          <ToggleTheme />
-          <Routes>
-            <Route path="/" element={<Home />} />
-            <Route path="/upload" element={<Upload />} />
-            <Route path="/upload-story" element={<StoryUpload />} />
-            <Route path="/story/:uid" element={<StoryViewer />} />
-            {/* Add more routes here like /chat /reels /profile */}
-          </Routes>
-          <BottomNav />
-        </Router>
+    <Router>
+      <div className="bg-white dark:bg-black min-h-screen text-black dark:text-white">
+        <ToggleTheme />
+        <Routes>
+          <Route path="/" element={<Home />} />
+          <Route path="/upload" element={<Upload />} />
+          <Route path="/stories" element={<StoryViewer />} />
+          <Route path="/reels" element={<Reels />} />
+        </Routes>
+        <BottomNav />
       </div>
-    </ThemeProvider>
+    </Router>
   )
 }
+
+export default App
