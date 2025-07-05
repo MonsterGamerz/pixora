@@ -1,46 +1,27 @@
-import StoryBar from "../components/StoryBar"
-import React, { useEffect, useState } from "react"
-import { db } from "../firebase"
-import { collection, onSnapshot, query, orderBy } from "firebase/firestore"
-import { Link } from "react-router-dom"
+import React from 'react'
+import { Link } from 'react-router-dom'
 
-function Home() {
-  const [posts, setPosts] = useState([])
-
-  useEffect(() => {
-    const q = query(collection(db, "posts"), orderBy("timestamp", "desc"))
-    const unsub = onSnapshot(q, (snapshot) => {
-      setPosts(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })))
-    })
-
-    return () => unsub()
-  }, [])
-
+export default function Home() {
   return (
-    <div className="p-4">
-      <h1 className="text-2xl font-bold mb-4">Pixora Feed</h1>
+    <div className="min-h-screen p-6 pb-20 text-center bg-gray-50">
+      <h1 className="text-3xl font-bold mb-2 text-blue-600">Welcome to Pixora</h1>
+      <p className="text-gray-500 mb-6">Share your world with others.</p>
 
-      {/* Upload Shortcut */}
-      <Link to="/upload" className="block bg-blue-600 text-white py-2 px-4 rounded mb-4 text-center">
-        Upload a Post
-      </Link>
+      <div className="flex flex-col gap-4 items-center">
+        <Link to="/upload" className="w-full max-w-sm px-4 py-2 bg-blue-500 text-white rounded-full shadow hover:bg-blue-600 transition">
+          Upload a Post
+        </Link>
+        <Link to="/search" className="w-full max-w-sm px-4 py-2 bg-gray-200 text-gray-800 rounded-full shadow hover:bg-gray-300 transition">
+          Search Users
+        </Link>
+        <Link to="/accounts" className="w-full max-w-sm px-4 py-2 bg-gray-200 text-gray-800 rounded-full shadow hover:bg-gray-300 transition">
+          Browse Accounts
+        </Link>
+      </div>
 
-      {/* Feed */}
-      {posts.length === 0 ? (
-        <p className="text-gray-500">No posts yet. Be the first to upload!</p>
-      ) : (
-        <div className="grid gap-4">
-          {posts.map(post => (
-            <div key={post.id} className="bg-white dark:bg-gray-800 p-4 rounded-xl shadow">
-              <img src={post.imageUrl} alt="Pixora Post" className="w-full h-auto rounded mb-2" />
-              <p>{post.caption}</p>
-              <p className="text-xs text-gray-500">By: {post.username}</p>
-            </div>
-          ))}
-        </div>
-      )}
+      <div className="mt-10 text-sm text-gray-400">
+        Built with ❤️ by Pixora
+      </div>
     </div>
   )
 }
-
-export default Home
