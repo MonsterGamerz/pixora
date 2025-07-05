@@ -2,6 +2,29 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Spinner animation */
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.spinner {
+  @apply w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full;
+  animation: spin 1s linear infinite;
+}
+
+/* General body styling */
 body {
-  @apply bg-white text-black dark:bg-black dark:text-white;
+  @apply bg-white text-gray-900 font-sans;
+}
+
+/* Logo on loading screen */
+.loading-logo {
+  @apply w-10 h-10 mb-4;
+}
+
+/* Smooth transitions for route changes etc. */
+.fade {
+  @apply transition-opacity duration-300 ease-in-out;
 }
