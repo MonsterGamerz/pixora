@@ -1,57 +1,90 @@
-import React, { useEffect, useState } from 'react'; import { collection, getDocs, query, where } from 'firebase/firestore'; import { db } from '../firebase'; import { Link } from 'react-router-dom'; import { Clock } from 'lucide-react';
+// src/pages/Search.jsx
+import React, { useState } from 'react'
+import { db } from '../firebase'
+import { collection, getDocs, query, where } from 'firebase/firestore'
+import { useNavigate } from 'react-router-dom'
 
-export default function Search() { const [searchTerm, setSearchTerm] = useState(''); const [results, setResults] = useState([]); const [recent, setRecent] = useState(() => { const stored = localStorage.getItem('recentSearches'); return stored ? JSON.parse(stored) : []; });
+export default function Search() {
+  const [searchTerm, setSearchTerm] = useState('')
+  const [results, setResults] = useState([])
+  const [recentSearches, setRecentSearches] = useState([])
+  const navigate = useNavigate()
 
-const handleSearch = async () => { if (!searchTerm.trim()) return;
+  const handleSearch = async () => {
+    if (!searchTerm.trim()) return
 
-const q = query(
-  collection(db, 'users'),
-  where('username', '>=', searchTerm),
-  where('username', '<=', searchTerm + '\uf8ff')
-);
-const snapshot = await getDocs(q);
-const users = snapshot.docs.map(doc => ({ uid: doc.id, ...doc.data() }));
-setResults(users);
+    setRecentSearches((prev) => [searchTerm, ...prev.filter(term => term !== searchTerm)].slice(0, 5))
 
-if (!recent.includes(searchTerm)) {
-  const updated = [searchTerm, ...recent.slice(0, 4)];
-  setRecent(updated);
-  localStorage.setItem('recentSearches', JSON.stringify(updated));
-}
+    const q = query(
+      collection(db, 'users'),
+      where('username', '>=', searchTerm),
+      where('username', '<=', searchTerm + '\uf8ff')
+    )
 
-};
+    const snapshot = await getDocs(q)
+    const users = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))
+    setResults(users)
+  }
 
-useEffect(() => { if (searchTerm) handleSearch(); else setResults([]); }, [searchTerm]);
+  const handleKeyDown = (e) => {
+    if (e.key === 'Enter') handleSearch()
+  }
 
-return ( <div className="max-w-xl mx-auto p-4"> <div className="flex items-center mb-4"> <input type="text" placeholder="Search by username..." className="w-full p-2 border rounded" value={searchTerm} onChange={e => setSearchTerm(e.target.value)} /> </div>
+  return (
+    <div className="p-4 max-w-md mx-auto">
+      <div className="relative">
+        <input
+          type="text"
+          placeholder="Search users..."
+          className="w-full p-3 pl-10 border border-gray-300 rounded-full focus:outline-none"
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          onKeyDown={handleKeyDown}
+        />
+        <span
+          className="absolute left-3 top-3 text-gray-400 cursor-pointer"
+          onClick={handleSearch}
+        >🔍</span>
+      </div>
 
-{searchTerm === '' && recent.length > 0 && (
-    <div className="mb-4">
-      <h2 className="font-semibold mb-2">Recent Searches</h2>
-      <ul className="space-y-1">
-        {recent.map((term, index) => (
-          <li
-            key={index}
-            className="text-blue-600 cursor-pointer"
-            onClick={() => setSearchTerm(term)}
-          >
-            <Clock className="inline w-4 h-4 mr-1 text-gray-400" /> {term}
-          </li>
-        ))}
-      </ul>
+      {recentSearches.length > 0 && (
+        <div className="mt-4">
+          <h3 className="text-gray-500 mb-2">Recent Searches</h3>
+          <ul className="space-y-2">
+            {recentSearches.map((item, idx) => (
+              <li key={idx} className="text-blue-500 cursor-pointer" onClick={() => {
+                setSearchTerm(item)
+                handleSearch()
+              }}>
+                {item}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {results.length > 0 && (
+        <div className="mt-6">
+          <h3 className="font-semibold mb-3">Results:</h3>
+          {results.map((user) => (
+            <div
+              key={user.id}
+              className="p-3 border rounded-lg mb-3 cursor-pointer hover:bg-gray-50 flex items-center gap-4"
+              onClick={() => navigate(`/profile/${user.id}`)}
+            >
+              <img
+                src={user.photoURL || '/default-profile.jpg'}
+                alt="Profile"
+                className="w-10 h-10 rounded-full object-cover"
+              />
+              <div>
+                <p className="font-semibold">{user.username}</p>
+                <p className="text-sm text-gray-500">{user.bio || 'No bio'}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
-  )}
-
-  {results.map(user => (
-    <Link
-      to={`/profile/${user.uid}`}
-      key={user.uid}
-      className="block p-2 border-b"
-    >
-      <strong>{user.username}</strong> <span className="text-gray-500">{user.bio}</span>
-    </Link>
-  ))}
-</div>
-
-); }
-
+  )
+}
