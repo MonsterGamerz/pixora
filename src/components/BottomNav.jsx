@@ -1,37 +1,30 @@
 import React from 'react'
-import { NavLink } from 'react-router-dom'
-import { Home, Upload, Video, MessageCircle, Search, User, Bell } from 'lucide-react'
+import { Home, Search, Plus, MessageCircle, User } from 'lucide-react'
+import { Link, useLocation } from 'react-router-dom'
 
 export default function BottomNav() {
+  const { pathname } = useLocation()
+
+  const linkStyle = (path) =>
+    pathname === path ? 'text-blue-500' : 'text-gray-500'
+
   return (
-    <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 flex justify-around items-center h-14 z-50 dark:bg-black dark:border-gray-800">
-      <NavLink to="/" className={({ isActive }) => isActive ? 'text-blue-500' : 'text-gray-500'}>
-        <Home size={24} />
-      </NavLink>
-
-      <NavLink to="/search" className={({ isActive }) => isActive ? 'text-blue-500' : 'text-gray-500'}>
-        <Search size={24} />
-      </NavLink>
-
-      <NavLink to="/upload" className={({ isActive }) => isActive ? 'text-blue-500' : 'text-gray-500'}>
-        <Upload size={24} />
-      </NavLink>
-
-      <NavLink to="/reels" className={({ isActive }) => isActive ? 'text-blue-500' : 'text-gray-500'}>
-        <Video size={24} />
-      </NavLink>
-
-      <NavLink to="/chat" className={({ isActive }) => isActive ? 'text-blue-500' : 'text-gray-500'}>
-        <MessageCircle size={24} />
-      </NavLink>
-
-      <NavLink to="/accounts" className={({ isActive }) => isActive ? 'text-blue-500' : 'text-gray-500'}>
-        <User size={24} />
-      </NavLink>
-
-      <NavLink to="/notifications" className={({ isActive }) => isActive ? 'text-blue-500' : 'text-gray-500'}>
-        <Bell size={24} />
-      </NavLink>
-    </nav>
+    <div className="fixed bottom-0 w-full bg-white border-t flex justify-around py-2 z-50">
+      <Link to="/" className={linkStyle('/')}>
+        <Home size={28} />
+      </Link>
+      <Link to="/search" className={linkStyle('/search')}>
+        <Search size={28} />
+      </Link>
+      <Link to="/upload" className={linkStyle('/upload')}>
+        <Plus size={28} />
+      </Link>
+      <Link to="/chat" className={linkStyle('/chat')}>
+        <MessageCircle size={28} />
+      </Link>
+      <Link to="/accounts" className={linkStyle('/accounts')}>
+        <User size={28} />
+      </Link>
+    </div>
   )
 }
