@@ -1,25 +1,36 @@
 // src/pages/Accounts.jsx
-import React from 'react'
-import { Link } from 'react-router-dom'
-
-const dummyUsers = [
-  { uid: 'user1', username: 'LionelMessi', bio: 'GOAT of Football' },
-  { uid: 'user2', username: 'PixoraFan', bio: 'Sharing my world 🌀' },
-  { uid: 'user3', username: 'JaneDoe', bio: 'Photographer & Dreamer' },
-]
+import React, { useEffect, useState } from "react";
+import { collection, getDocs } from "firebase/firestore";
+import { db } from "../firebase";
+import { Link } from "react-router-dom";
 
 export default function Accounts() {
+  const [users, setUsers] = useState([]);
+
+  useEffect(() => {
+    const fetchAccounts = async () => {
+      const snap = await getDocs(collection(db, "users"));
+      const allUsers = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      setUsers(allUsers);
+    };
+
+    fetchAccounts();
+  }, []);
+
   return (
-    <div className="max-w-xl mx-auto p-6">
-      <h1 className="text-2xl font-bold mb-4">All Users</h1>
-      <div className="space-y-4">
-        {dummyUsers.map(user => (
-          <Link to={`/profile/${user.uid}`} key={user.uid} className="block p-4 border border-gray-200 rounded-xl shadow hover:bg-gray-50 transition">
-            <h2 className="text-lg font-semibold">{user.username}</h2>
-            <p className="text-gray-500">{user.bio}</p>
-          </Link>
+    <div className="p-6 max-w-xl mx-auto">
+      <h2 className="text-2xl font-bold mb-4">All Users</h2>
+      <ul className="space-y-4">
+        {users.map(user => (
+          <li key={user.id} className="flex items-center justify-between bg-white p-4 shadow rounded">
+            <div>
+              <h3 className="font-semibold">{user.username}</h3>
+              <p className="text-sm text-gray-500">{user.email}</p>
+            </div>
+            <Link to={`/profile/${user.id}`} className="text-blue-600 font-medium hover:underline">View</Link>
+          </li>
         ))}
-      </div>
+      </ul>
     </div>
-  )
+  );
 }
