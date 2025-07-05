@@ -1,55 +1,73 @@
-// src/pages/Search.jsx import React, { useState, useEffect } from 'react' import { collection, getDocs } from 'firebase/firestore' import { db } from '../firebase' import { Link } from 'react-router-dom'
+// src/pages/Search.jsx
+import React, { useState, useEffect } from "react";
+import { collection, getDocs } from "firebase/firestore";
+import { db } from "../firebase";
+import { Link } from "react-router-dom";
 
-export default function Search() { const [search, setSearch] = useState('') const [results, setResults] = useState([]) const [recent, setRecent] = useState([])
+export default function Search() {
+  const [query, setQuery] = useState("");
+  const [results, setResults] = useState([]);
+  const [recent, setRecent] = useState([]);
 
-useEffect(() => { const stored = localStorage.getItem('recentSearches') if (stored) setRecent(JSON.parse(stored)) }, [])
+  useEffect(() => {
+    const stored = JSON.parse(localStorage.getItem("recentSearches")) || [];
+    setRecent(stored);
+  }, []);
 
-useEffect(() => { const fetchUsers = async () => { const querySnapshot = await getDocs(collection(db, 'users')) const users = [] querySnapshot.forEach((doc) => { users.push({ id: doc.id, ...doc.data() }) }) setResults(users) } fetchUsers() }, [])
+  const handleSearch = async () => {
+    const snap = await getDocs(collection(db, "users"));
+    const allUsers = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    const filtered = allUsers.filter(user =>
+      user.username.toLowerCase().includes(query.toLowerCase())
+    );
+    setResults(filtered);
 
-const handleSearch = (val) => { setSearch(val) if (val && !recent.includes(val)) { const updated = [val, ...recent.slice(0, 4)] setRecent(updated) localStorage.setItem('recentSearches', JSON.stringify(updated)) } }
+    if (query.trim()) {
+      const updatedRecent = [query, ...recent.filter(item => item !== query)].slice(0, 5);
+      setRecent(updatedRecent);
+      localStorage.setItem("recentSearches", JSON.stringify(updatedRecent));
+    }
+  };
 
-const filtered = results.filter(user => user.username?.toLowerCase().includes(search.toLowerCase()) )
+  return (
+    <div className="p-6 max-w-xl mx-auto">
+      <h2 className="text-2xl font-bold mb-4">Search Users</h2>
+      <input
+        type="text"
+        placeholder="Search by username"
+        className="w-full p-2 border border-gray-300 rounded mb-2"
+        value={query}
+        onChange={(e) => setQuery(e.target.value)}
+        onKeyDown={(e) => e.key === "Enter" && handleSearch()}
+      />
+      <button onClick={handleSearch} className="bg-blue-600 text-white px-4 py-2 rounded mb-4">
+        Search
+      </button>
 
-return ( <div className="p-4 max-w-lg mx-auto"> <input type="text" placeholder="Search users..." className="w-full p-2 border rounded" value={search} onChange={(e) => handleSearch(e.target.value)} />
-
-{recent.length > 0 && (
-    <div className="mt-4">
-      <h2 className="text-sm text-gray-500 mb-1">Recent Searches</h2>
-      <div className="flex gap-2 flex-wrap">
-        {recent.map((r, i) => (
-          <button
-            key={i}
-            className="text-sm bg-gray-200 rounded px-2 py-1"
-            onClick={() => handleSearch(r)}
-          >
-            {r}
-          </button>
-        ))}
-      </div>
-    </div>
-  )}
-
-  <div className="mt-6 space-y-3">
-    {filtered.length === 0 && <p className="text-gray-500">No users found</p>}
-    {filtered.map((user) => (
-      <Link
-        key={user.id}
-        to={`/profile/${user.id}`}
-        className="flex items-center gap-4 border p-2 rounded hover:bg-gray-100"
-      >
-        <img
-          src={user.photoURL || "https://cdn-icons-png.flaticon.com/512/149/149071.png"}
-          alt="avatar"
-          className="w-10 h-10 rounded-full"
-        />
-        <div>
-          <p className="font-semibold">@{user.username}</p>
-          <p className="text-xs text-gray-500">{user.bio}</p>
+      {recent.length > 0 && (
+        <div className="mb-6">
+          <h3 className="text-lg font-semibold">Recent Searches:</h3>
+          <ul className="list-disc pl-5 text-sm text-gray-600">
+            {recent.map((item, idx) => (
+              <li key={idx}>{item}</li>
+            ))}
+          </ul>
         </div>
-      </Link>
-    ))}
-  </div>
-</div>
+      )}
 
-) }
-
+      {results.length > 0 && (
+        <ul className="space-y-4">
+          {results.map(user => (
+            <li key={user.id} className="bg-white p-4 shadow rounded flex justify-between items-center">
+              <div>
+                <h3 className="font-semibold">{user.username}</h3>
+                <p className="text-sm text-gray-500">{user.email}</p>
+              </div>
+              <Link to={`/profile/${user.id}`} className="text-blue-600 hover:underline font-medium">View</Link>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
