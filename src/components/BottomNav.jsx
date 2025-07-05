@@ -1,37 +1,37 @@
-import React from 'react';
-import { Link, useLocation } from 'react-router-dom';
-import { Home, Upload, Search, MessageCircle, Users } from 'lucide-react';
+import React from 'react'
+import { NavLink } from 'react-router-dom'
+import { Home, Upload, Video, MessageCircle, Search, User, Bell } from 'lucide-react'
 
 export default function BottomNav() {
-  const { pathname } = useLocation();
-
-  const navStyle = (path) =>
-    `flex flex-col items-center text-xs ${
-      pathname === path ? 'text-blue-500' : 'text-gray-500'
-    }`;
-
   return (
-    <nav className="fixed bottom-0 left-0 w-full bg-white border-t flex justify-around p-2 z-50">
-      <Link to="/" className={navStyle('/')}>
-        <Home size={20} />
-        Home
-      </Link>
-      <Link to="/upload" className={navStyle('/upload')}>
-        <Upload size={20} />
-        Upload
-      </Link>
-      <Link to="/search" className={navStyle('/search')}>
-        <Search size={20} />
-        Search
-      </Link>
-      <Link to="/chat" className={navStyle('/chat')}>
-        <MessageCircle size={20} />
-        Chat
-      </Link>
-      <Link to="/accounts" className={navStyle('/accounts')}>
-        <Users size={20} />
-        Accounts
-      </Link>
+    <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 flex justify-around items-center h-14 z-50 dark:bg-black dark:border-gray-800">
+      <NavLink to="/" className={({ isActive }) => isActive ? 'text-blue-500' : 'text-gray-500'}>
+        <Home size={24} />
+      </NavLink>
+
+      <NavLink to="/search" className={({ isActive }) => isActive ? 'text-blue-500' : 'text-gray-500'}>
+        <Search size={24} />
+      </NavLink>
+
+      <NavLink to="/upload" className={({ isActive }) => isActive ? 'text-blue-500' : 'text-gray-500'}>
+        <Upload size={24} />
+      </NavLink>
+
+      <NavLink to="/reels" className={({ isActive }) => isActive ? 'text-blue-500' : 'text-gray-500'}>
+        <Video size={24} />
+      </NavLink>
+
+      <NavLink to="/chat" className={({ isActive }) => isActive ? 'text-blue-500' : 'text-gray-500'}>
+        <MessageCircle size={24} />
+      </NavLink>
+
+      <NavLink to="/accounts" className={({ isActive }) => isActive ? 'text-blue-500' : 'text-gray-500'}>
+        <User size={24} />
+      </NavLink>
+
+      <NavLink to="/notifications" className={({ isActive }) => isActive ? 'text-blue-500' : 'text-gray-500'}>
+        <Bell size={24} />
+      </NavLink>
     </nav>
-  );
+  )
 }
