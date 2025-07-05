@@ -1,54 +1,39 @@
-import React, { useEffect, useState } from "react";
-import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
-import { onAuthStateChanged } from "firebase/auth";
-import { auth } from "./firebase";
+import React, { useEffect, useState } from 'react'
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
+import Home from './pages/Home'
+import Upload from './pages/Upload'
+import Reels from './pages/Reels'
+import Chat from './pages/Chat'
+import Profile from './pages/Profile'
+import Login from './pages/Login'
+import Signup from './pages/Signup'
+import Navbar from './components/Navbar'
+import BottomNav from './components/BottomNav'
+import LoadingScreen from './components/LoadingScreen'
 
-// Pages
-import Home from "./pages/Home";
-import Reels from "./pages/Reels";
-import Upload from "./pages/Upload";
-import Chat from "./pages/Chat";
-import Profile from "./pages/Profile";
-import Login from "./pages/Login";
-import Signup from "./pages/Signup";
-
-// Components
-import BottomNav from "./components/BottomNav";
-
-function App() {
-  const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true);
+export default function App() {
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (currUser) => {
-      setUser(currUser);
-      setLoading(false);
-    });
-    return () => unsubscribe();
-  }, []);
+    const timer = setTimeout(() => setLoading(false), 2000)
+    return () => clearTimeout(timer)
+  }, [])
 
-  if (loading) return <div className="text-center mt-10 text-xl">Loading Pixora...</div>;
+  if (loading) return <LoadingScreen />
 
   return (
     <Router>
-      {user && <BottomNav />}
+      <Navbar />
       <Routes>
-        {/* Public Routes */}
-        <Route path="/login" element={!user ? <Login /> : <Navigate to="/" />} />
-        <Route path="/signup" element={!user ? <Signup /> : <Navigate to="/" />} />
-
-        {/* Protected Routes */}
-        <Route path="/" element={user ? <Home /> : <Navigate to="/login" />} />
-        <Route path="/reels" element={user ? <Reels /> : <Navigate to="/login" />} />
-        <Route path="/upload" element={user ? <Upload /> : <Navigate to="/login" />} />
-        <Route path="/chat" element={user ? <Chat /> : <Navigate to="/login" />} />
-        <Route path="/profile/:uid" element={user ? <Profile /> : <Navigate to="/login" />} />
-
-        {/* Catch-all redirect */}
-        <Route path="*" element={<Navigate to={user ? "/" : "/login"} />} />
+        <Route path="/" element={<Home />} />
+        <Route path="/upload" element={<Upload />} />
+        <Route path="/reels" element={<Reels />} />
+        <Route path="/chat" element={<Chat />} />
+        <Route path="/profile/:uid" element={<Profile />} />
+        <Route path="/login" element={<Login />} />
+        <Route path="/signup" element={<Signup />} />
       </Routes>
+      <BottomNav />
     </Router>
-  );
+  )
 }
-
-export default App;
