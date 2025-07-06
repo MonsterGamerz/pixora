@@ -1,36 +1,44 @@
 // src/pages/Accounts.jsx
-import React, { useEffect, useState } from "react";
-import { collection, getDocs } from "firebase/firestore";
-import { db } from "../firebase";
-import { Link } from "react-router-dom";
+import React, { useEffect, useState } from 'react';
+import { collection, getDocs } from 'firebase/firestore';
+import { db } from '../firebase';
+import { useNavigate } from 'react-router-dom';
 
 export default function Accounts() {
   const [users, setUsers] = useState([]);
+  const navigate = useNavigate();
 
   useEffect(() => {
-    const fetchAccounts = async () => {
-      const snap = await getDocs(collection(db, "users"));
-      const allUsers = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      setUsers(allUsers);
+    const fetchUsers = async () => {
+      const snapshot = await getDocs(collection(db, 'users'));
+      const userList = snapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      }));
+      setUsers(userList);
     };
-
-    fetchAccounts();
+    fetchUsers();
   }, []);
 
   return (
-    <div className="p-6 max-w-xl mx-auto">
-      <h2 className="text-2xl font-bold mb-4">All Users</h2>
-      <ul className="space-y-4">
-        {users.map(user => (
-          <li key={user.id} className="flex items-center justify-between bg-white p-4 shadow rounded">
-            <div>
-              <h3 className="font-semibold">{user.username}</h3>
-              <p className="text-sm text-gray-500">{user.email}</p>
-            </div>
-            <Link to={`/profile/${user.id}`} className="text-blue-600 font-medium hover:underline">View</Link>
-          </li>
-        ))}
-      </ul>
+    <div className="p-4">
+      <h1 className="text-2xl font-bold mb-4">All Accounts</h1>
+      {users.length === 0 ? (
+        <p className="text-gray-500">No users found</p>
+      ) : (
+        <ul className="space-y-3">
+          {users.map((user) => (
+            <li
+              key={user.id}
+              className="p-3 border rounded hover:bg-gray-100 cursor-pointer"
+              onClick={() => navigate(`/profile/${user.id}`)}
+            >
+              <strong>{user.username}</strong>
+              <p className="text-sm text-gray-600">{user.bio || 'No bio available'}</p>
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
   );
 }
