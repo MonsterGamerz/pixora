@@ -1,73 +1,81 @@
 // src/pages/Search.jsx
-import React, { useState, useEffect } from "react";
-import { collection, getDocs } from "firebase/firestore";
-import { db } from "../firebase";
-import { Link } from "react-router-dom";
+import React, { useState, useEffect } from 'react';
+import { collection, getDocs, query, where } from 'firebase/firestore';
+import { useNavigate } from 'react-router-dom';
+import { db } from '../firebase';
 
 export default function Search() {
-  const [query, setQuery] = useState("");
+  const [queryText, setQueryText] = useState('');
   const [results, setResults] = useState([]);
-  const [recent, setRecent] = useState([]);
+  const [recentSearches, setRecentSearches] = useState([]);
+  const navigate = useNavigate();
 
   useEffect(() => {
-    const stored = JSON.parse(localStorage.getItem("recentSearches")) || [];
-    setRecent(stored);
+    const storedSearches = JSON.parse(localStorage.getItem('recentSearches')) || [];
+    setRecentSearches(storedSearches);
   }, []);
 
   const handleSearch = async () => {
-    const snap = await getDocs(collection(db, "users"));
-    const allUsers = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-    const filtered = allUsers.filter(user =>
-      user.username.toLowerCase().includes(query.toLowerCase())
-    );
-    setResults(filtered);
+    if (!queryText) return;
+    const q = query(collection(db, 'users'), where('username', '>=', queryText), where('username', '<=', queryText + '\uf8ff'));
+    const snapshot = await getDocs(q);
+    const matchedUsers = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    setResults(matchedUsers);
 
-    if (query.trim()) {
-      const updatedRecent = [query, ...recent.filter(item => item !== query)].slice(0, 5);
-      setRecent(updatedRecent);
-      localStorage.setItem("recentSearches", JSON.stringify(updatedRecent));
-    }
+    const updatedSearches = [queryText, ...recentSearches.filter((item) => item !== queryText)].slice(0, 5);
+    localStorage.setItem('recentSearches', JSON.stringify(updatedSearches));
+    setRecentSearches(updatedSearches);
   };
 
   return (
-    <div className="p-6 max-w-xl mx-auto">
-      <h2 className="text-2xl font-bold mb-4">Search Users</h2>
+    <div className="p-4">
       <input
         type="text"
-        placeholder="Search by username"
-        className="w-full p-2 border border-gray-300 rounded mb-2"
-        value={query}
-        onChange={(e) => setQuery(e.target.value)}
-        onKeyDown={(e) => e.key === "Enter" && handleSearch()}
+        className="w-full p-2 rounded border"
+        placeholder="Search by username..."
+        value={queryText}
+        onChange={(e) => setQueryText(e.target.value)}
+        onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
       />
-      <button onClick={handleSearch} className="bg-blue-600 text-white px-4 py-2 rounded mb-4">
-        Search
-      </button>
 
-      {recent.length > 0 && (
-        <div className="mb-6">
-          <h3 className="text-lg font-semibold">Recent Searches:</h3>
-          <ul className="list-disc pl-5 text-sm text-gray-600">
-            {recent.map((item, idx) => (
-              <li key={idx}>{item}</li>
-            ))}
-          </ul>
-        </div>
-      )}
-
-      {results.length > 0 && (
-        <ul className="space-y-4">
-          {results.map(user => (
-            <li key={user.id} className="bg-white p-4 shadow rounded flex justify-between items-center">
-              <div>
-                <h3 className="font-semibold">{user.username}</h3>
-                <p className="text-sm text-gray-500">{user.email}</p>
-              </div>
-              <Link to={`/profile/${user.id}`} className="text-blue-600 hover:underline font-medium">View</Link>
+      <div className="mt-4">
+        <h2 className="font-bold text-lg mb-2">Recent Searches</h2>
+        {recentSearches.length === 0 && <p className="text-gray-500">No recent searches</p>}
+        <ul className="space-y-1">
+          {recentSearches.map((search, idx) => (
+            <li
+              key={idx}
+              className="text-blue-600 cursor-pointer"
+              onClick={() => {
+                setQueryText(search);
+                handleSearch();
+              }}
+            >
+              {search}
             </li>
           ))}
         </ul>
-      )}
+      </div>
+
+      <div className="mt-6">
+        <h2 className="font-bold text-lg mb-2">Results</h2>
+        {results.length === 0 ? (
+          <p className="text-gray-500">No users found</p>
+        ) : (
+          <ul className="space-y-2">
+            {results.map((user) => (
+              <li
+                key={user.id}
+                className="border p-3 rounded cursor-pointer hover:bg-gray-100"
+                onClick={() => navigate(`/profile/${user.id}`)}
+              >
+                <strong>{user.username}</strong><br />
+                <small className="text-gray-500">{user.bio || 'No bio'}</small>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
     </div>
   );
-}
+                  }
