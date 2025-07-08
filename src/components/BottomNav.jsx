@@ -1,23 +1,22 @@
+// src/components/BottomNav.jsx
 import React from 'react';
-import { Link, useLocation } from 'react-router-dom';
-import {
-  Home as HomeIcon,
-  Search as SearchIcon,
-  PlusSquare,
-  Video,
-  MessageCircle,
-  User
-} from 'lucide-react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { Home as HomeIcon, PlusSquare, Video, Search as SearchIcon, User, LogOut } from 'lucide-react';
+import { auth } from '../firebase';
 
 export default function BottomNav() {
   const { pathname } = useLocation();
+  const navigate = useNavigate();
+
+  const handleLogout = () => {
+    auth.signOut().then(() => navigate('/login'));
+  };
 
   const links = [
     { to: '/', icon: <HomeIcon />, label: 'Home' },
     { to: '/search', icon: <SearchIcon />, label: 'Search' },
     { to: '/upload', icon: <PlusSquare />, label: 'Upload' },
     { to: '/stories', icon: <Video />, label: 'Stories' },
-    { to: '/chat', icon: <MessageCircle />, label: 'Chat' },
     { to: '/account', icon: <User />, label: 'Account' },
   ];
 
@@ -35,6 +34,14 @@ export default function BottomNav() {
           <span>{label}</span>
         </Link>
       ))}
+      {/* Logout button */}
+      <button
+        onClick={handleLogout}
+        className="flex flex-col items-center text-sm text-gray-500"
+      >
+        <LogOut />
+        <span>Logout</span>
+      </button>
     </nav>
   );
 }
