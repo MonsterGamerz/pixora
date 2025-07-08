@@ -1,4 +1,3 @@
-// src/pages/Home.jsx
 import React, { useEffect, useState } from 'react';
 import {
   collection,
@@ -6,10 +5,10 @@ import {
   orderBy,
   query,
   doc,
-  getDoc,
   updateDoc,
   arrayUnion,
   arrayRemove,
+  getDoc,
 } from 'firebase/firestore';
 import { db, auth } from '../firebase';
 import { useNavigate } from 'react-router-dom';
@@ -24,20 +23,33 @@ export default function Home() {
   useEffect(() => {
     const q = query(collection(db, 'posts'), orderBy('createdAt', 'desc'));
     const unsub = onSnapshot(q, async (snapshot) => {
-      const postList = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
-      setPosts(postList);
+      const postsData = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+      setPosts(postsData);
 
-      const userIds = [...new Set(postList.map(post => post.userId))];
-      const nameMap = {};
-      await Promise.all(
-        userIds.map(async (uid) => {
-          const userDoc = await getDoc(doc(db, 'users', uid));
-          nameMap[uid] = userDoc.exists() ? userDoc.data().username : 'Unknown';
-        })
-      );
-      setUsernames(nameMap);
+      const usernameMap = {};
+      for (const post of postsData) {
+        if (!usernames[post.userId]) {
+          const userDoc = await getDoc(doc(db, 'users', post.userId));
+          if (userDoc.exists()) {
+            usernameMap[post.userId] = userDoc.data().username || 'User';
+          }
+        }
+      }
+      setUsernames(prev => ({ ...prev, ...usernameMap }));
     });
+
     return unsub;
+  }, []);
+
+  useEffect(() => {
+    const unsubscribe = onSnapshot(collection(db, 'posts'), (snapshot) => {
+      const likeData = {};
+      snapshot.forEach((doc) => {
+        likeData[doc.id] = doc.data().likes || [];
+      });
+      setLikes(likeData);
+    });
+    return unsubscribe;
   }, []);
 
   const toggleLike = async (postId) => {
@@ -52,17 +64,6 @@ export default function Home() {
     });
   };
 
-  useEffect(() => {
-    const unsub = onSnapshot(collection(db, 'posts'), (snapshot) => {
-      const likeData = {};
-      snapshot.forEach((doc) => {
-        likeData[doc.id] = doc.data().likes || [];
-      });
-      setLikes(likeData);
-    });
-    return unsub;
-  }, []);
-
   const handleShare = async (url) => {
     try {
       await navigator.clipboard.writeText(url);
@@ -74,6 +75,7 @@ export default function Home() {
 
   return (
     <div className="p-4 max-w-md mx-auto">
+      {/* Top Bar */}
       <div className="flex justify-between items-center mb-4">
         <h1 className="text-xl font-bold">Pixora</h1>
         <button onClick={() => navigate('/chat')}>
@@ -81,23 +83,22 @@ export default function Home() {
         </button>
       </div>
 
+      {/* Feed */}
       {posts.map((post) => (
         <div key={post.id} className="mb-6 border p-3 rounded">
-          <p className="text-sm font-semibold text-gray-700">
-            @{usernames[post.userId] || 'Loading...'}
-          </p>
           {post.type === 'image' ? (
-            <img src={post.url} alt="post" className="w-full rounded mt-1" />
+            <img src={post.url} alt="post" className="w-full rounded" />
           ) : (
-            <video controls src={post.url} className="w-full rounded mt-1" />
+            <video controls src={post.url} className="w-full rounded" />
           )}
-          <p className="mt-2 text-sm text-gray-700">{post.caption}</p>
+          <p className="text-sm font-semibold mt-2">
+            @{usernames[post.userId] || '...'}
+          </p>
+          <p className="text-sm text-gray-700">{post.caption}</p>
           <div className="flex items-center gap-4 mt-2 text-gray-700">
             <button onClick={() => toggleLike(post.id)}>
               <Heart
-                className={`w-5 h-5 ${
-                  likes[post.id]?.includes(auth.currentUser?.uid) ? 'text-red-500' : ''
-                }`}
+                className={`w-5 h-5 ${likes[post.id]?.includes(auth.currentUser?.uid) ? 'text-red-500' : ''}`}
               />
             </button>
             <button onClick={() => navigate(`/post/${post.id}/comments`)}>
