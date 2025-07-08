@@ -1,4 +1,3 @@
-// src/pages/CommentsPage.jsx
 import React, { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import {
@@ -13,6 +12,7 @@ import {
   getDoc,
 } from 'firebase/firestore';
 import { db, auth } from '../firebase';
+import moment from 'moment';
 
 export default function CommentsPage() {
   const { id } = useParams(); // post ID
@@ -29,10 +29,12 @@ export default function CommentsPage() {
         snapshot.docs.map(async (docSnap) => {
           const data = docSnap.data();
           const userSnap = await getDoc(doc(db, 'users', data.userId));
+          const userData = userSnap.exists() ? userSnap.data() : {};
           return {
             id: docSnap.id,
             ...data,
-            username: userSnap.exists() ? userSnap.data().username : 'Unknown',
+            username: userData.username || 'Unknown',
+            photoURL: userData.photoURL || '',
           };
         })
       );
@@ -56,8 +58,7 @@ export default function CommentsPage() {
   };
 
   const handleDelete = async (commentId) => {
-    const commentRef = doc(db, 'posts', id, 'comments', commentId);
-    await deleteDoc(commentRef);
+    await deleteDoc(doc(db, 'posts', id, 'comments', commentId));
   };
 
   return (
@@ -66,17 +67,31 @@ export default function CommentsPage() {
 
       {/* Comments List */}
       {comments.map((comment) => (
-        <div key={comment.id} className="border p-2 rounded mb-2">
-          <p className="font-semibold">@{comment.username}</p>
-          <p>{comment.text}</p>
-          {auth.currentUser?.uid === comment.userId && (
-            <button
-              className="text-red-500 text-xs mt-1"
-              onClick={() => handleDelete(comment.id)}
-            >
-              Delete
-            </button>
-          )}
+        <div key={comment.id} className="flex items-start gap-2 mb-3">
+          <img
+            src={comment.photoURL || '/default-avatar.png'}
+            alt="avatar"
+            className="w-8 h-8 rounded-full object-cover"
+          />
+          <div className="flex-1 bg-gray-100 p-2 rounded">
+            <div className="flex justify-between items-center">
+              <p className="text-sm font-semibold">@{comment.username}</p>
+              {comment.createdAt?.seconds && (
+                <span className="text-xs text-gray-500">
+                  {moment(comment.createdAt.toDate()).fromNow()}
+                </span>
+              )}
+            </div>
+            <p className="text-sm">{comment.text}</p>
+            {auth.currentUser?.uid === comment.userId && (
+              <button
+                className="text-red-500 text-xs mt-1"
+                onClick={() => handleDelete(comment.id)}
+              >
+                Delete
+              </button>
+            )}
+          </div>
         </div>
       ))}
 
@@ -98,4 +113,4 @@ export default function CommentsPage() {
       </div>
     </div>
   );
-        }
+}
