@@ -2,13 +2,10 @@ import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import Home from './pages/Home';
 import Upload from './pages/Upload';
-import Reels from './pages/Reels';
 import Stories from './pages/Stories';
 import Chat from './pages/Chat';
-import Login from './pages/Login';
-import Signup from './pages/Signup';
 import Account from './pages/Account';
-import Search from './pages/Search';
+import EditProfile from './pages/EditProfile';
 import CommentsPage from './pages/CommentsPage';
 import BottomNav from './components/BottomNav';
 
@@ -19,13 +16,10 @@ function App() {
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/upload" element={<Upload />} />
-          <Route path="/reels" element={<Reels />} />
           <Route path="/stories" element={<Stories />} />
           <Route path="/chat" element={<Chat />} />
-          <Route path="/login" element={<Login />} />
-          <Route path="/signup" element={<Signup />} />
-          <Route path="/account" element={<Account />} />
-          <Route path="/search" element={<Search />} />
+          <Route path="/account/:id?" element={<Account />} />
+          <Route path="/edit-profile" element={<EditProfile />} />
           <Route path="/post/:id/comments" element={<CommentsPage />} />
         </Routes>
         <BottomNav />
