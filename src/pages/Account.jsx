@@ -7,67 +7,114 @@ import {
   collection,
   query,
   where,
-  onSnapshot
+  onSnapshot,
+  updateDoc,
+  arrayUnion,
+  arrayRemove,
 } from 'firebase/firestore';
 
 export default function Account() {
   const { id } = useParams();
   const navigate = useNavigate();
   const currentUser = auth.currentUser;
-  const isCurrentUser = !id || id === currentUser?.uid;
-  const [userData, setUserData] = useState({});
-  const [userPosts, setUserPosts] = useState([]);
+  const viewingId = id || currentUser.uid;
+  const isOwnProfile = viewingId === currentUser.uid;
+
+  const [profile, setProfile] = useState(null);
+  const [posts, setPosts] = useState([]);
+  const [isFollowing, setIsFollowing] = useState(false);
 
   useEffect(() => {
-    const uid = id || currentUser?.uid;
-    if (!uid) return;
-
-    const fetchUser = async () => {
-      const userDoc = await getDoc(doc(db, 'users', uid));
-      if (userDoc.exists()) {
-        setUserData(userDoc.data());
+    // Subscribe to profile data
+    const unsubProfile = onSnapshot(doc(db, 'users', viewingId), snap => {
+      if (snap.exists()) {
+        const data = snap.data();
+        setProfile(data);
+        setIsFollowing(data.followers?.includes(currentUser.uid));
       }
-    };
-
-    fetchUser();
-
-    const q = query(collection(db, 'posts'), where('userId', '==', uid));
-    const unsub = onSnapshot(q, (snapshot) => {
-      const posts = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      setUserPosts(posts);
     });
 
-    return () => unsub();
-  }, [id, currentUser]);
+    // Subscribe to posts by this user
+    const postsQuery = query(
+      collection(db, 'posts'),
+      where('userId', '==', viewingId)
+    );
+    const unsubPosts = onSnapshot(postsQuery, snap => {
+      setPosts(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+    });
+
+    return () => {
+      unsubProfile();
+      unsubPosts();
+    };
+  }, [viewingId, currentUser.uid]);
+
+  const toggleFollow = async () => {
+    const meRef = doc(db, 'users', currentUser.uid);
+    const themRef = doc(db, 'users', viewingId);
+
+    if (isFollowing) {
+      await updateDoc(themRef, { followers: arrayRemove(currentUser.uid) });
+      await updateDoc(meRef, { following: arrayRemove(viewingId) });
+    } else {
+      await updateDoc(themRef, { followers: arrayUnion(currentUser.uid) });
+      await updateDoc(meRef, { following: arrayUnion(viewingId) });
+    }
+  };
+
+  if (!profile) return <p className="p-4 text-center">Loading profile...</p>;
 
   return (
     <div className="p-4 max-w-md mx-auto">
       <div className="flex items-center justify-between mb-4">
         <div>
-          <h2 className="text-xl font-bold">@{userData.username || 'User'}</h2>
-          <p className="text-sm text-gray-500">{userData.bio || ''}</p>
+          <h2 className="text-xl font-bold">@{profile.username}</h2>
+          <p className="text-sm text-gray-600">{profile.bio}</p>
         </div>
-        {isCurrentUser && (
+        {isOwnProfile ? (
           <button
             onClick={() => navigate('/edit-profile')}
-            className="text-blue-500 text-sm"
+            className="px-3 py-1 bg-blue-500 text-white rounded"
           >
             Edit Profile
+          </button>
+        ) : (
+          <button
+            onClick={toggleFollow}
+            className={`px-3 py-1 rounded text-white ${
+              isFollowing ? 'bg-red-500' : 'bg-green-500'
+            }`}
+          >
+            {isFollowing ? 'Unfollow' : 'Follow'}
           </button>
         )}
       </div>
 
-      <h3 className="font-semibold mb-2">Your Posts</h3>
-      {userPosts.map((post) => (
-        <div key={post.id} className="mb-4 border p-2 rounded">
-          {post.type === 'image' ? (
-            <img src={post.url} alt="post" className="w-full rounded" />
+      <div className="text-sm text-gray-600 mb-4">
+        <span>{profile.followers?.length || 0} Followers</span> ·{' '}
+        <span>{profile.following?.length || 0} Following</span>
+      </div>
+
+      <h3 className="font-semibold mb-2">{isOwnProfile ? 'Your Posts' : 'Posts'}</h3>
+      <div className="grid grid-cols-2 gap-2">
+        {posts.map(post =>
+          post.type === 'image' ? (
+            <img
+              key={post.id}
+              src={post.url}
+              alt="post"
+              className="w-full h-32 object-cover rounded"
+            />
           ) : (
-            <video src={post.url} controls className="w-full rounded" />
-          )}
-          <p className="text-sm mt-1">{post.caption}</p>
-        </div>
-      ))}
+            <video
+              key={post.id}
+              src={post.url}
+              controls
+              className="w-full h-32 object-cover rounded"
+            />
+          )
+        )}
+      </div>
     </div>
-  );
+);
 }
