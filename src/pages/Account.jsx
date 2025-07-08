@@ -1,70 +1,81 @@
+// src/pages/Account.jsx
 import React, { useEffect, useState } from 'react';
+import { useParams } from 'react-router-dom';
+import { doc, getDoc, updateDoc, arrayUnion, arrayRemove } from 'firebase/firestore';
 import { auth, db } from '../firebase';
-import { doc, getDoc, collection, query, where, onSnapshot } from 'firebase/firestore';
-import EditProfileModal from '../components/EditProfileModal';
 
 export default function Account() {
+  const { uid } = useParams();
   const [userData, setUserData] = useState(null);
-  const [posts, setPosts] = useState([]);
-  const [showEdit, setShowEdit] = useState(false);
+  const [isFollowing, setIsFollowing] = useState(false);
+  const currentUser = auth.currentUser;
 
   useEffect(() => {
     const fetchUser = async () => {
-      const docRef = doc(db, 'users', auth.currentUser.uid);
-      const snap = await getDoc(docRef);
-      if (snap.exists()) setUserData(snap.data());
+      const userDoc = await getDoc(doc(db, 'users', uid));
+      if (userDoc.exists()) {
+        const data = userDoc.data();
+        setUserData(data);
+        setIsFollowing(data.followers?.includes(currentUser?.uid));
+      }
     };
 
-    const q = query(collection(db, 'posts'), where('userId', '==', auth.currentUser.uid));
-    const unsub = onSnapshot(q, (snap) => {
-      setPosts(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+    if (uid) fetchUser();
+  }, [uid, currentUser?.uid]);
+
+  const handleFollow = async () => {
+    if (!currentUser || currentUser.uid === uid) return;
+
+    const myRef = doc(db, 'users', currentUser.uid);
+    const theirRef = doc(db, 'users', uid);
+
+    await updateDoc(myRef, {
+      following: isFollowing ? arrayRemove(uid) : arrayUnion(uid)
     });
 
-    fetchUser();
-    return unsub;
-  }, []);
+    await updateDoc(theirRef, {
+      followers: isFollowing ? arrayRemove(currentUser.uid) : arrayUnion(currentUser.uid)
+    });
+
+    setIsFollowing(!isFollowing);
+  };
+
+  if (!userData) return <p className="text-center mt-10 text-white">Loading...</p>;
 
   return (
     <div className="p-4 text-white">
-      {userData && (
-        <div className="text-center">
-          <img
-            src={userData.profilePic || 'https://via.placeholder.com/100'}
-            className="w-24 h-24 rounded-full mx-auto mb-2 object-cover"
-            alt="Profile"
-          />
-          <h2 className="text-xl font-bold">@{userData.username}</h2>
-          <p className="text-gray-400 text-sm">{userData.bio}</p>
-          <div className="flex justify-center gap-4 my-4">
-            <div><strong>{posts.length}</strong> posts</div>
-            <div><strong>{userData.followers?.length || 0}</strong> followers</div>
-            <div><strong>{userData.following?.length || 0}</strong> following</div>
-          </div>
-          <button
-            onClick={() => setShowEdit(true)}
-            className="px-4 py-1 bg-pink-600 rounded text-sm"
-          >
-            Edit Profile
-          </button>
+      <div className="flex items-center space-x-4 mb-4">
+        <img
+          src={userData.profilePic || '/default-avatar.png'}
+          className="w-16 h-16 rounded-full object-cover"
+          alt="profile"
+        />
+        <div>
+          <h2 className="text-lg font-semibold">@{userData.username}</h2>
+          <p className="text-sm text-gray-400">{userData.bio || 'No bio yet.'}</p>
         </div>
-      )}
-
-      <div className="grid grid-cols-3 gap-2 mt-6">
-        {posts.map(post => (
-          post.type === 'image' ? (
-            <img key={post.id} src={post.url} alt="" className="w-full h-32 object-cover" />
-          ) : (
-            <video key={post.id} src={post.url} className="w-full h-32 object-cover" />
-          )
-        ))}
       </div>
 
-      {showEdit && (
-        <EditProfileModal
-          user={userData}
-          onClose={() => setShowEdit(false)}
-          onUpdate={() => window.location.reload()}
-        />
+      <div className="flex space-x-4 mb-4">
+        <div>
+          <p className="font-bold">{userData.followers?.length || 0}</p>
+          <p className="text-xs text-gray-400">Followers</p>
+        </div>
+        <div>
+          <p className="font-bold">{userData.following?.length || 0}</p>
+          <p className="text-xs text-gray-400">Following</p>
+        </div>
+      </div>
+
+      {currentUser?.uid !== uid && (
+        <button
+          onClick={handleFollow}
+          className={`px-4 py-2 rounded font-semibold ${
+            isFollowing ? 'bg-gray-800 text-white' : 'bg-pink-600 text-white'
+          }`}
+        >
+          {isFollowing ? 'Unfollow' : 'Follow'}
+        </button>
       )}
     </div>
   );
