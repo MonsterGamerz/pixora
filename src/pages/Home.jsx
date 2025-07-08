@@ -1,9 +1,8 @@
-// src/pages/Home.jsx
 import React, { useEffect, useState } from 'react';
 import { collection, onSnapshot, orderBy, query } from 'firebase/firestore';
 import { db } from '../firebase';
 import { useNavigate } from 'react-router-dom';
-import { MessageSquare } from 'lucide-react';
+import { MessageSquare, Heart, Send, MessageCircle } from 'lucide-react';
 
 export default function Home() {
   const [posts, setPosts] = useState([]);
@@ -29,13 +28,28 @@ export default function Home() {
 
       {/* Feed */}
       {posts.map(post => (
-        <div key={post.id} className="mb-6 border p-3 rounded">
+        <div key={post.id} className="mb-6 border rounded overflow-hidden">
+          {/* Media */}
           {post.type === 'image' ? (
-            <img src={post.url} alt="post" className="w-full rounded" />
+            <img src={post.url} alt="post" className="w-full" />
           ) : (
-            <video controls src={post.url} className="w-full rounded" />
+            <video controls src={post.url} className="w-full" />
           )}
-          <p className="mt-2 text-sm text-gray-700">{post.caption}</p>
+
+          {/* Actions */}
+          <div className="flex gap-4 p-2 items-center">
+            <Heart className="w-5 h-5 text-gray-700 cursor-pointer" />
+            <MessageCircle
+              className="w-5 h-5 text-gray-700 cursor-pointer"
+              onClick={() => navigate(`/post/${post.id}`)}
+            />
+            <Send className="w-5 h-5 text-gray-700 cursor-pointer" />
+          </div>
+
+          {/* Caption */}
+          <div className="px-2 pb-2">
+            <p className="text-sm text-gray-700">{post.caption}</p>
+          </div>
         </div>
       ))}
     </div>
