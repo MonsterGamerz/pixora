@@ -13,7 +13,6 @@ import Signup from './pages/Signup';
 import Account from './pages/Account';
 import EditProfile from './pages/EditProfile';
 import CommentsPage from './pages/CommentsPage';
-import StoryViewer from './components/StoryViewer';
 import Search from './pages/Search';
 import BottomNav from './components/BottomNav';
 
@@ -62,7 +61,6 @@ export default function App() {
         <Route path="/post/:postId/comments" element={<CommentsPage />} />
         <Route path="/login" element={<Login />} />
         <Route path="/signup" element={<Signup />} />
-        <Route path="/stories/:userId" element={<StoryViewer />} />
       </Routes>
 
       {/* Hide BottomNav on Login/Signup/StoryViewer */}
