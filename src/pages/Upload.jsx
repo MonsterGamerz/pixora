@@ -1,8 +1,9 @@
+// src/pages/Upload.jsx
 import React, { useState } from 'react';
 import { db, auth } from '../firebase';
-import { collection, addDoc, serverTimestamp, doc, getDoc } from 'firebase/firestore';
-import { useNavigate } from 'react-router-dom';
+import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import axios from 'axios';
+import { useNavigate } from 'react-router-dom';
 
 export default function Upload() {
   const [file, setFile] = useState(null);
@@ -11,45 +12,32 @@ export default function Upload() {
   const navigate = useNavigate();
 
   const handleUpload = async () => {
-    if (!file || !auth.currentUser) return alert("Missing file or user.");
+    if (!file || !auth.currentUser) return alert("File or user not found.");
     setUploading(true);
 
     try {
-      // Get username
-      const userDoc = await getDoc(doc(db, 'users', auth.currentUser.uid));
-      const username = userDoc.exists() ? userDoc.data().username : 'unknown';
-
-      // Prepare file for Cloudinary
       const formData = new FormData();
       formData.append('file', file);
-      formData.append('upload_preset', 'pixora'); // must match Cloudinary preset
+      formData.append('upload_preset', 'pixora');
 
-      // Upload to Cloudinary
-      console.log('Uploading to Cloudinary...');
-      const res = await axios.post(
-        'https://api.cloudinary.com/v1_1/dmwwifdds/auto/upload',
-        formData
-      );
-      console.log('Upload success:', res.data);
-
+      const res = await axios.post('https://api.cloudinary.com/v1_1/dmwwifdds/auto/upload', formData);
       const fileURL = res.data.secure_url;
-      const type = file.type.startsWith('video') ? 'video' : 'image';
+      const fileType = file.type.startsWith('video') ? 'video' : 'image';
 
-      // Upload metadata to Firestore
       await addDoc(collection(db, 'posts'), {
         url: fileURL,
         caption,
-        type,
-        username,
+        type: fileType,
         userId: auth.currentUser.uid,
+        username: auth.currentUser.displayName || 'unknown',
         createdAt: serverTimestamp(),
-        likes: []
+        likes: [],
       });
 
       navigate('/');
     } catch (err) {
-      console.error('Upload failed:', err);
-      alert('Upload failed: ' + err.message);
+      console.error("Upload failed:", err);
+      alert('Upload failed.');
     } finally {
       setUploading(false);
     }
