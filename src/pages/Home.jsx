@@ -1,3 +1,4 @@
+// src/pages/Home.jsx
 import React, { useEffect, useState } from 'react';
 import {
   collection,
@@ -5,6 +6,7 @@ import {
   orderBy,
   query,
   doc,
+  getDoc,
   updateDoc,
   arrayUnion,
   arrayRemove,
@@ -16,22 +18,44 @@ import { MessageSquare, Heart, Share } from 'lucide-react';
 export default function Home() {
   const [posts, setPosts] = useState([]);
   const [likes, setLikes] = useState({});
+  const [usernames, setUsernames] = useState({});
   const navigate = useNavigate();
 
-  // Fetch posts
   useEffect(() => {
     const q = query(collection(db, 'posts'), orderBy('createdAt', 'desc'));
-    const unsub = onSnapshot(q, snapshot => {
-      setPosts(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+    const unsub = onSnapshot(q, async (snapshot) => {
+      const postList = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+      setPosts(postList);
+
+      const userIds = [...new Set(postList.map(post => post.userId))];
+      const nameMap = {};
+      await Promise.all(
+        userIds.map(async (uid) => {
+          const userDoc = await getDoc(doc(db, 'users', uid));
+          nameMap[uid] = userDoc.exists() ? userDoc.data().username : 'Unknown';
+        })
+      );
+      setUsernames(nameMap);
     });
     return unsub;
   }, []);
 
-  // Fetch likes per post
+  const toggleLike = async (postId) => {
+    const userId = auth.currentUser?.uid;
+    if (!userId) return;
+
+    const postRef = doc(db, 'posts', postId);
+    const isLiked = likes[postId]?.includes(userId);
+
+    await updateDoc(postRef, {
+      likes: isLiked ? arrayRemove(userId) : arrayUnion(userId),
+    });
+  };
+
   useEffect(() => {
-    const unsub = onSnapshot(collection(db, 'posts'), snapshot => {
+    const unsub = onSnapshot(collection(db, 'posts'), (snapshot) => {
       const likeData = {};
-      snapshot.forEach(doc => {
+      snapshot.forEach((doc) => {
         likeData[doc.id] = doc.data().likes || [];
       });
       setLikes(likeData);
@@ -39,31 +63,17 @@ export default function Home() {
     return unsub;
   }, []);
 
-  const toggleLike = async postId => {
-    const userId = auth.currentUser?.uid;
-    if (!userId) return;
-    const postRef = doc(db, 'posts', postId);
-    const isLiked = likes[postId]?.includes(userId);
-
-    await updateDoc(postRef, {
-      likes: isLiked
-        ? arrayRemove(userId)
-        : arrayUnion(userId),
-    });
-  };
-
-  const handleShare = async url => {
+  const handleShare = async (url) => {
     try {
       await navigator.clipboard.writeText(url);
       alert('Link copied to clipboard!');
     } catch (error) {
-      console.error('Failed to copy:', error);
+      console.error('Failed to copy: ', error);
     }
   };
 
   return (
     <div className="p-4 max-w-md mx-auto">
-      {/* Top Bar */}
       <div className="flex justify-between items-center mb-4">
         <h1 className="text-xl font-bold">Pixora</h1>
         <button onClick={() => navigate('/chat')}>
@@ -71,24 +81,22 @@ export default function Home() {
         </button>
       </div>
 
-      {/* Feed */}
-      {posts.map(post => (
+      {posts.map((post) => (
         <div key={post.id} className="mb-6 border p-3 rounded">
+          <p className="text-sm font-semibold text-gray-700">
+            @{usernames[post.userId] || 'Loading...'}
+          </p>
           {post.type === 'image' ? (
-            <img src={post.url} alt="post" className="w-full rounded" />
+            <img src={post.url} alt="post" className="w-full rounded mt-1" />
           ) : (
-            <video controls src={post.url} className="w-full rounded" />
+            <video controls src={post.url} className="w-full rounded mt-1" />
           )}
           <p className="mt-2 text-sm text-gray-700">{post.caption}</p>
-
-          {/* Actions */}
           <div className="flex items-center gap-4 mt-2 text-gray-700">
             <button onClick={() => toggleLike(post.id)}>
               <Heart
                 className={`w-5 h-5 ${
-                  likes[post.id]?.includes(auth.currentUser?.uid)
-                    ? 'text-red-500'
-                    : ''
+                  likes[post.id]?.includes(auth.currentUser?.uid) ? 'text-red-500' : ''
                 }`}
               />
             </button>
@@ -99,7 +107,6 @@ export default function Home() {
               <Share className="w-5 h-5" />
             </button>
           </div>
-
           <p className="text-xs text-gray-500 mt-1">
             {likes[post.id]?.length || 0} likes
           </p>
