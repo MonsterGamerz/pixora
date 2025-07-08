@@ -1,6 +1,7 @@
+// src/pages/Upload.jsx
 import React, { useState } from 'react';
 import { db, auth } from '../firebase';
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp, doc, getDoc } from 'firebase/firestore';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 
@@ -11,44 +12,39 @@ export default function Upload() {
   const navigate = useNavigate();
 
   const handleUpload = async () => {
-    if (!file || !auth.currentUser) {
-      alert("Please select a file and make sure you're logged in.");
-      return;
-    }
-
+    if (!file || !auth.currentUser) return alert("File or user not found.");
     setUploading(true);
 
     try {
-      // Prepare FormData for Cloudinary
+      // Get username from Firestore
+      const userDoc = await getDoc(doc(db, 'users', auth.currentUser.uid));
+      const userData = userDoc.exists() ? userDoc.data() : {};
+      const username = userData.username || 'unknown';
+
+      // Upload to Cloudinary
       const formData = new FormData();
       formData.append('file', file);
       formData.append('upload_preset', 'pixora');
 
-      // Upload to Cloudinary
-      const res = await axios.post(
-        'https://api.cloudinary.com/v1_1/dmwwifdds/auto/upload',
-        formData
-      );
-
+      const res = await axios.post('https://api.cloudinary.com/v1_1/dmwwifdds/auto/upload', formData);
       const fileURL = res.data.secure_url;
-      const type = file.type.startsWith('video') ? 'video' : 'image';
+      const fileType = file.type.startsWith('video') ? 'video' : 'image';
 
-      // Store in Firestore
+      // Save post in Firestore
       await addDoc(collection(db, 'posts'), {
         url: fileURL,
         caption,
-        type,
+        type: fileType, // must be exactly "video" for Reels
+        username,
         userId: auth.currentUser.uid,
         createdAt: serverTimestamp(),
-        likes: [],
-        comments: [],
-        shares: 0
+        likes: []
       });
 
       navigate('/');
     } catch (err) {
-      console.error('Upload failed:', err);
-      alert('Upload failed. Try again.');
+      console.error("Upload failed:", err);
+      alert('Upload failed.');
     } finally {
       setUploading(false);
     }
@@ -56,22 +52,19 @@ export default function Upload() {
 
   return (
     <div className="p-4 max-w-md mx-auto">
-      <h1 className="text-xl font-bold mb-4 text-center">Upload to Pixora</h1>
-
+      <h1 className="text-xl font-bold mb-4">Upload to Pixora</h1>
       <input
         type="file"
         accept="image/*,video/*"
         onChange={(e) => setFile(e.target.files[0])}
-        className="mb-4 w-full"
+        className="mb-4"
       />
-
       <textarea
         placeholder="Write a caption..."
         className="w-full border p-2 mb-4 rounded"
         value={caption}
         onChange={(e) => setCaption(e.target.value)}
       />
-
       <button
         onClick={handleUpload}
         className="bg-pink-500 text-white px-4 py-2 rounded w-full"
