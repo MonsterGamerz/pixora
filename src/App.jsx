@@ -1,64 +1,52 @@
 // src/App.jsx
-import React, { useEffect, useState } from 'react';
-import {
-  BrowserRouter as Router,
-  Routes,
-  Route,
-  Navigate
-} from 'react-router-dom';
+import React, { useEffect, useState } from 'react'
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
+import { onAuthStateChanged } from 'firebase/auth'
+import { auth } from './firebase'
 
-import Home from './pages/Home';
-import Upload from './pages/Upload';
-import Stories from './pages/Stories';
-import Chat from './pages/Chat';
-import Account from './pages/Account';
-import EditProfile from './pages/EditProfile';
-import CommentsPage from './pages/CommentsPage';
-import Search from './pages/Search';
-import Signup from './pages/Signup';
-import Login from './pages/Login';
-import Reels from './pages/Reels';
-import BottomNav from './components/BottomNav';
+// Pages
+import Home from './pages/Home'
+import Upload from './pages/Upload'
+import Reels from './pages/Reels'
+import Login from './pages/Login'
+import Signup from './pages/Signup'
+import Comments from './pages/Comments'
+import Account from './pages/Account'
+import EditProfile from './pages/EditProfile'
 
-import { auth } from './firebase';
+// UI
+import BottomNav from './components/BottomNav'
 
 export default function App() {
-  const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [user, setUser] = useState(null)
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    const unsubscribe = auth.onAuthStateChanged((u) => {
-      setUser(u);
-      setLoading(false);
-    });
-    return () => unsubscribe();
-  }, []);
+    const unsub = onAuthStateChanged(auth, (user) => {
+      setUser(user)
+      setLoading(false)
+    })
+    return unsub
+  }, [])
 
-  if (loading) return <div className="text-center mt-20">Loading your account...</div>;
+  if (loading) return <div className="text-white p-4">Loading your account...</div>
 
   return (
     <Router>
-      <div className="pb-20">
-        <Routes>
-          {/* Public */}
-          <Route path="/signup" element={!user ? <Signup /> : <Navigate to="/" />} />
-          <Route path="/login" element={!user ? <Login /> : <Navigate to="/" />} />
+      {user && <BottomNav />}
+      <Routes>
+        <Route path="/login" element={!user ? <Login /> : <Navigate to="/" />} />
+        <Route path="/signup" element={!user ? <Signup /> : <Navigate to="/" />} />
 
-          {/* Protected */}
-          <Route path="/" element={user ? <Home /> : <Navigate to="/login" />} />
-          <Route path="/upload" element={user ? <Upload /> : <Navigate to="/login" />} />
-          <Route path="/stories" element={user ? <Stories /> : <Navigate to="/login" />} />
-          <Route path="/reels" element={user ? <Reels /> : <Navigate to="/login" />} />
-          <Route path="/chat" element={user ? <Chat /> : <Navigate to="/login" />} />
-          <Route path="/search" element={user ? <Search /> : <Navigate to="/login" />} />
-          <Route path="/account/:id?" element={user ? <Account /> : <Navigate to="/login" />} />
-          <Route path="/edit-profile" element={user ? <EditProfile /> : <Navigate to="/login" />} />
-          <Route path="/post/:id/comments" element={user ? <CommentsPage /> : <Navigate to="/login" />} />
-          <Route path="*" element={<Navigate to={user ? "/" : "/login"} />} />
-        </Routes>
+        <Route path="/" element={user ? <Home /> : <Navigate to="/login" />} />
+        <Route path="/upload" element={user ? <Upload /> : <Navigate to="/login" />} />
+        <Route path="/reels" element={user ? <Reels /> : <Navigate to="/login" />} />
+        <Route path="/account/:id" element={user ? <Account /> : <Navigate to="/login" />} />
+        <Route path="/edit-profile" element={user ? <EditProfile /> : <Navigate to="/login" />} />
+        <Route path="/post/:id/comments" element={user ? <Comments /> : <Navigate to="/login" />} />
 
-        {user && <BottomNav />}
-      </div>
+        <Route path="*" element={<Navigate to={user ? "/" : "/login"} />} />
+      </Routes>
     </Router>
-  );
+  )
 }
