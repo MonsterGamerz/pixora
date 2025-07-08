@@ -1,120 +1,61 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { auth, db } from '../firebase';
-import {
-  doc,
-  getDoc,
-  collection,
-  query,
-  where,
-  onSnapshot,
-  updateDoc,
-  arrayUnion,
-  arrayRemove,
-} from 'firebase/firestore';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
 
 export default function Account() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const currentUser = auth.currentUser;
-  const viewingId = id || currentUser.uid;
-  const isOwnProfile = viewingId === currentUser.uid;
-
-  const [profile, setProfile] = useState(null);
-  const [posts, setPosts] = useState([]);
-  const [isFollowing, setIsFollowing] = useState(false);
+  const [userData, setUserData] = useState(null);
+  const uid = id || auth.currentUser?.uid;
 
   useEffect(() => {
-    // Subscribe to profile data
-    const unsubProfile = onSnapshot(doc(db, 'users', viewingId), snap => {
-      if (snap.exists()) {
-        const data = snap.data();
-        setProfile(data);
-        setIsFollowing(data.followers?.includes(currentUser.uid));
+    if (!uid) return;
+    const fetchUser = async () => {
+      const docRef = doc(db, 'users', uid);
+      const docSnap = await getDoc(docRef);
+      if (docSnap.exists()) {
+        setUserData(docSnap.data());
+      } else {
+        // Auto-create if missing
+        const user = auth.currentUser;
+        if (user && uid === user.uid) {
+          const newUser = {
+            uid,
+            email: user.email,
+            username: user.displayName || 'User',
+            bio: '',
+            followers: [],
+            following: []
+          };
+          await setDoc(docRef, newUser);
+          setUserData(newUser);
+        }
       }
-    });
-
-    // Subscribe to posts by this user
-    const postsQuery = query(
-      collection(db, 'posts'),
-      where('userId', '==', viewingId)
-    );
-    const unsubPosts = onSnapshot(postsQuery, snap => {
-      setPosts(snap.docs.map(d => ({ id: d.id, ...d.data() })));
-    });
-
-    return () => {
-      unsubProfile();
-      unsubPosts();
     };
-  }, [viewingId, currentUser.uid]);
+    fetchUser();
+  }, [uid]);
 
-  const toggleFollow = async () => {
-    const meRef = doc(db, 'users', currentUser.uid);
-    const themRef = doc(db, 'users', viewingId);
-
-    if (isFollowing) {
-      await updateDoc(themRef, { followers: arrayRemove(currentUser.uid) });
-      await updateDoc(meRef, { following: arrayRemove(viewingId) });
-    } else {
-      await updateDoc(themRef, { followers: arrayUnion(currentUser.uid) });
-      await updateDoc(meRef, { following: arrayUnion(viewingId) });
-    }
-  };
-
-  if (!profile) return <p className="p-4 text-center">Loading profile...</p>;
+  if (!userData) return <div className="text-center mt-10">Loading your account...</div>;
 
   return (
     <div className="p-4 max-w-md mx-auto">
       <div className="flex items-center justify-between mb-4">
-        <div>
-          <h2 className="text-xl font-bold">@{profile.username}</h2>
-          <p className="text-sm text-gray-600">{profile.bio}</p>
-        </div>
-        {isOwnProfile ? (
+        <h2 className="text-xl font-bold">{userData.username}'s Profile</h2>
+        {uid === auth.currentUser?.uid && (
           <button
             onClick={() => navigate('/edit-profile')}
-            className="px-3 py-1 bg-blue-500 text-white rounded"
+            className="text-sm text-pink-600 border px-2 py-1 rounded"
           >
-            Edit Profile
-          </button>
-        ) : (
-          <button
-            onClick={toggleFollow}
-            className={`px-3 py-1 rounded text-white ${
-              isFollowing ? 'bg-red-500' : 'bg-green-500'
-            }`}
-          >
-            {isFollowing ? 'Unfollow' : 'Follow'}
+            Edit
           </button>
         )}
       </div>
 
-      <div className="text-sm text-gray-600 mb-4">
-        <span>{profile.followers?.length || 0} Followers</span> ·{' '}
-        <span>{profile.following?.length || 0} Following</span>
-      </div>
-
-      <h3 className="font-semibold mb-2">{isOwnProfile ? 'Your Posts' : 'Posts'}</h3>
-      <div className="grid grid-cols-2 gap-2">
-        {posts.map(post =>
-          post.type === 'image' ? (
-            <img
-              key={post.id}
-              src={post.url}
-              alt="post"
-              className="w-full h-32 object-cover rounded"
-            />
-          ) : (
-            <video
-              key={post.id}
-              src={post.url}
-              controls
-              className="w-full h-32 object-cover rounded"
-            />
-          )
-        )}
-      </div>
+      <p className="text-gray-700 mb-2">Email: {userData.email}</p>
+      <p className="text-gray-700 mb-2">Bio: {userData.bio || 'No bio yet'}</p>
+      <p className="text-gray-700 mb-2">Followers: {userData.followers?.length || 0}</p>
+      <p className="text-gray-700 mb-2">Following: {userData.following?.length || 0}</p>
     </div>
-);
+  );
 }
