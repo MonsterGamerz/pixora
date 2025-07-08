@@ -5,31 +5,32 @@ import {
   collection,
   query,
   orderBy,
-  addDoc,
   onSnapshot,
+  addDoc,
   serverTimestamp
 } from 'firebase/firestore';
 import { db, auth } from '../firebase';
 
 export default function CommentsPage() {
-  const { id } = useParams(); // postId
+  const { id: postId } = useParams();
   const [comments, setComments] = useState([]);
   const [newComment, setNewComment] = useState('');
 
+  // Subscribe to comments subcollection
   useEffect(() => {
-    const q = query(collection(db, `posts/${id}/comments`), orderBy('createdAt', 'asc'));
-    const unsubscribe = onSnapshot(q, snapshot => {
+    const commentsRef = collection(db, 'posts', postId, 'comments');
+    const q = query(commentsRef, orderBy('createdAt', 'asc'));
+    const unsub = onSnapshot(q, snapshot => {
       setComments(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
     });
-    return unsubscribe;
-  }, [id]);
+    return unsub;
+  }, [postId]);
 
   const handleSubmit = async () => {
-    if (!newComment.trim() || !auth.currentUser) return;
-    await addDoc(collection(db, `posts/${id}/comments`), {
-      text: newComment,
+    if (!newComment.trim()) return;
+    await addDoc(collection(db, 'posts', postId, 'comments'), {
       userId: auth.currentUser.uid,
-      username: auth.currentUser.displayName || "Anonymous",
+      text: newComment.trim(),
       createdAt: serverTimestamp()
     });
     setNewComment('');
@@ -38,28 +39,28 @@ export default function CommentsPage() {
   return (
     <div className="p-4 max-w-md mx-auto">
       <h1 className="text-xl font-bold mb-4">Comments</h1>
-
-      <div className="space-y-3">
-        {comments.map(comment => (
-          <div key={comment.id} className="border p-2 rounded">
-            <p className="font-semibold">@{comment.username}</p>
-            <p>{comment.text}</p>
+      <div className="space-y-3 mb-6">
+        {comments.map(c => (
+          <div key={c.id} className="border-b pb-2">
+            <p className="text-sm">{c.text}</p>
           </div>
         ))}
+        {comments.length === 0 && (
+          <p className="text-gray-500">No comments yet.</p>
+        )}
       </div>
-
-      <div className="mt-4 flex">
+      <div className="flex gap-2">
         <input
-          className="flex-1 border p-2 rounded-l"
+          className="flex-1 border p-2 rounded"
           placeholder="Write a comment..."
           value={newComment}
           onChange={e => setNewComment(e.target.value)}
         />
         <button
-          className="bg-pink-500 text-white px-4 rounded-r"
           onClick={handleSubmit}
+          className="bg-blue-500 text-white px-4 py-2 rounded"
         >
-          Send
+          Post
         </button>
       </div>
     </div>
