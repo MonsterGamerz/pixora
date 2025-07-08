@@ -1,65 +1,70 @@
 import React, { useEffect, useState } from 'react';
 import { auth, db } from '../firebase';
-import { doc, getDoc, updateDoc, arrayUnion, arrayRemove } from 'firebase/firestore';
-import { useParams } from 'react-router-dom';
+import { doc, getDoc, collection, query, where, onSnapshot } from 'firebase/firestore';
+import EditProfileModal from '../components/EditProfileModal';
 
 export default function Account() {
-  const { id } = useParams();
-  const currentUser = auth.currentUser;
-  const [user, setUser] = useState(null);
-  const [isOwn, setIsOwn] = useState(false);
-  const [isFollowing, setIsFollowing] = useState(false);
-
-  const loadUser = async () => {
-    const uid = id || currentUser.uid;
-    const docSnap = await getDoc(doc(db, 'users', uid));
-    if (docSnap.exists()) {
-      const data = docSnap.data();
-      setUser(data);
-      setIsOwn(uid === currentUser.uid);
-      setIsFollowing(data.followers?.includes(currentUser.uid));
-    }
-  };
-
-  const toggleFollow = async () => {
-    if (!user) return;
-    const targetRef = doc(db, 'users', user.uid);
-    const currentRef = doc(db, 'users', currentUser.uid);
-
-    if (isFollowing) {
-      await updateDoc(targetRef, { followers: arrayRemove(currentUser.uid) });
-      await updateDoc(currentRef, { following: arrayRemove(user.uid) });
-    } else {
-      await updateDoc(targetRef, { followers: arrayUnion(currentUser.uid) });
-      await updateDoc(currentRef, { following: arrayUnion(user.uid) });
-    }
-
-    setIsFollowing(!isFollowing);
-  };
+  const [userData, setUserData] = useState(null);
+  const [posts, setPosts] = useState([]);
+  const [showEdit, setShowEdit] = useState(false);
 
   useEffect(() => {
-    loadUser();
-  }, [id]);
+    const fetchUser = async () => {
+      const docRef = doc(db, 'users', auth.currentUser.uid);
+      const snap = await getDoc(docRef);
+      if (snap.exists()) setUserData(snap.data());
+    };
 
-  if (!user) return <div className="p-4">Loading profile...</div>;
+    const q = query(collection(db, 'posts'), where('userId', '==', auth.currentUser.uid));
+    const unsub = onSnapshot(q, (snap) => {
+      setPosts(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+    });
+
+    fetchUser();
+    return unsub;
+  }, []);
 
   return (
-    <div className="p-4">
-      <h1 className="text-xl font-bold mb-1">@{user.username}</h1>
-      <p className="text-gray-600 mb-2">{user.email}</p>
-      <p className="text-sm text-gray-500 mb-2">{user.bio || 'No bio yet.'}</p>
-      <div className="flex gap-4 mb-4">
-        <span><strong>{user.followers?.length || 0}</strong> Followers</span>
-        <span><strong>{user.following?.length || 0}</strong> Following</span>
+    <div className="p-4 text-white">
+      {userData && (
+        <div className="text-center">
+          <img
+            src={userData.profilePic || 'https://via.placeholder.com/100'}
+            className="w-24 h-24 rounded-full mx-auto mb-2 object-cover"
+            alt="Profile"
+          />
+          <h2 className="text-xl font-bold">@{userData.username}</h2>
+          <p className="text-gray-400 text-sm">{userData.bio}</p>
+          <div className="flex justify-center gap-4 my-4">
+            <div><strong>{posts.length}</strong> posts</div>
+            <div><strong>{userData.followers?.length || 0}</strong> followers</div>
+            <div><strong>{userData.following?.length || 0}</strong> following</div>
+          </div>
+          <button
+            onClick={() => setShowEdit(true)}
+            className="px-4 py-1 bg-pink-600 rounded text-sm"
+          >
+            Edit Profile
+          </button>
+        </div>
+      )}
+
+      <div className="grid grid-cols-3 gap-2 mt-6">
+        {posts.map(post => (
+          post.type === 'image' ? (
+            <img key={post.id} src={post.url} alt="" className="w-full h-32 object-cover" />
+          ) : (
+            <video key={post.id} src={post.url} className="w-full h-32 object-cover" />
+          )
+        ))}
       </div>
 
-      {!isOwn && (
-        <button
-          onClick={toggleFollow}
-          className={`px-4 py-2 rounded ${isFollowing ? 'bg-gray-300 text-black' : 'bg-pink-500 text-white'}`}
-        >
-          {isFollowing ? 'Unfollow' : 'Follow'}
-        </button>
+      {showEdit && (
+        <EditProfileModal
+          user={userData}
+          onClose={() => setShowEdit(false)}
+          onUpdate={() => window.location.reload()}
+        />
       )}
     </div>
   );
