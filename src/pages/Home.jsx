@@ -1,84 +1,52 @@
+// src/pages/Home.jsx
 import React, { useEffect, useState } from 'react';
-import {
-  collection,
-  onSnapshot,
-  orderBy,
-  query,
-  doc,
-  setDoc,
-  deleteDoc,
-  addDoc,
-} from 'firebase/firestore';
+import { collection, onSnapshot, orderBy, query, doc, updateDoc, arrayUnion, arrayRemove } from 'firebase/firestore';
 import { db, auth } from '../firebase';
 import { useNavigate } from 'react-router-dom';
-import {
-  MessageSquare,
-  Heart,
-  Share2,
-  Send,
-} from 'lucide-react';
+import { MessageSquare, Heart, Share2 } from 'lucide-react';
 
 export default function Home() {
   const [posts, setPosts] = useState([]);
   const navigate = useNavigate();
+  const user = auth.currentUser;
 
   useEffect(() => {
     const q = query(collection(db, 'posts'), orderBy('createdAt', 'desc'));
-    const unsubscribe = onSnapshot(q, async (snapshot) => {
-      const postsData = await Promise.all(
-        snapshot.docs.map(async (docSnap) => {
-          const data = docSnap.data();
-          const id = docSnap.id;
-
-          const likesRef = collection(db, 'posts', id, 'likes');
-          const likesSnap = await onSnapshot(likesRef, () => {});
-          const likes = likesSnap.size;
-
-          const commentsRef = collection(db, 'posts', id, 'comments');
-          const commentsSnap = await onSnapshot(commentsRef, () => {});
-          const comments = commentsSnap.size;
-
-          return { id, ...data, likes, comments };
-        })
-      );
-      setPosts(postsData);
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      setPosts(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
     });
-
     return unsubscribe;
   }, []);
 
-  const handleLike = async (postId) => {
-    const likeRef = doc(db, 'posts', postId, 'likes', auth.currentUser.uid);
-    const likeSnap = await likeRef.get();
-
-    if (likeSnap.exists()) {
-      await deleteDoc(likeRef);
-    } else {
-      await setDoc(likeRef, {
-        userId: auth.currentUser.uid,
-        likedAt: new Date(),
-      });
-    }
+  const handleLike = async (post) => {
+    if (!user) return alert("You must be logged in");
+    const postRef = doc(db, 'posts', post.id);
+    const alreadyLiked = post.likes?.includes(user.uid);
+    await updateDoc(postRef, {
+      likes: alreadyLiked
+        ? arrayRemove(user.uid)
+        : arrayUnion(user.uid)
+    });
   };
 
   const handleComment = async (postId) => {
-    const comment = prompt('Write your comment:');
-    if (comment) {
-      await addDoc(collection(db, 'posts', postId, 'comments'), {
-        userId: auth.currentUser.uid,
-        text: comment,
-        createdAt: new Date(),
-      });
-    }
+    const text = prompt("Enter your comment:");
+    if (!text || !user) return;
+    const postRef = doc(db, 'posts', postId);
+    await updateDoc(postRef, {
+      comments: arrayUnion({ userId: user.uid, text })
+    });
   };
 
-  const handleShare = (url) => {
-    navigator.clipboard.writeText(url);
-    alert('Post URL copied!');
+  const handleShare = async (postId) => {
+    const url = `${window.location.origin}/post/${postId}`;
+    await navigator.clipboard.writeText(url);
+    alert("Post link copied to clipboard!");
   };
 
   return (
     <div className="p-4 max-w-md mx-auto">
+      {/* Top Bar */}
       <div className="flex justify-between items-center mb-4">
         <h1 className="text-xl font-bold">Pixora</h1>
         <button onClick={() => navigate('/chat')}>
@@ -86,7 +54,8 @@ export default function Home() {
         </button>
       </div>
 
-      {posts.map((post) => (
+      {/* Feed */}
+      {posts.map(post => (
         <div key={post.id} className="mb-6 border p-3 rounded">
           {post.type === 'image' ? (
             <img src={post.url} alt="post" className="w-full rounded" />
@@ -95,19 +64,28 @@ export default function Home() {
           )}
           <p className="mt-2 text-sm text-gray-700">{post.caption}</p>
 
-          <div className="flex gap-4 mt-2">
-            <button onClick={() => handleLike(post.id)} className="flex items-center">
-              <Heart className="w-5 h-5 mr-1" /> {post.likes || 0}
+          {/* Action Buttons */}
+          <div className="flex space-x-4 mt-2">
+            <button onClick={() => handleLike(post)}>
+              <Heart
+                className={`w-5 h-5 ${post.likes?.includes(user?.uid) ? 'text-red-500' : 'text-gray-500'}`}
+                fill={post.likes?.includes(user?.uid) ? 'red' : 'none'}
+              />
             </button>
-            <button onClick={() => handleComment(post.id)} className="flex items-center">
-              <MessageSquare className="w-5 h-5 mr-1" /> {post.comments || 0}
+            <button onClick={() => handleComment(post.id)}>
+              <MessageSquare className="w-5 h-5 text-gray-500" />
             </button>
-            <button onClick={() => handleShare(post.url)} className="flex items-center">
-              <Share2 className="w-5 h-5 mr-1" /> Share
+            <button onClick={() => handleShare(post.id)}>
+              <Share2 className="w-5 h-5 text-gray-500" />
             </button>
+          </div>
+
+          {/* Stats */}
+          <div className="text-xs text-gray-500 mt-1">
+            {post.likes?.length || 0} likes · {post.comments?.length || 0} comments
           </div>
         </div>
       ))}
     </div>
   );
-}
+          }
