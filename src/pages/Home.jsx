@@ -1,6 +1,5 @@
-// src/pages/Home.jsx
 import React, { useEffect, useState } from 'react';
-import { collection, onSnapshot, orderBy, query, doc, updateDoc, arrayUnion, arrayRemove } from 'firebase/firestore';
+import { collection, doc, onSnapshot, orderBy, query, updateDoc, arrayUnion, arrayRemove } from 'firebase/firestore';
 import { db, auth } from '../firebase';
 import { useNavigate } from 'react-router-dom';
 import { MessageSquare, Heart, Share2 } from 'lucide-react';
@@ -8,7 +7,7 @@ import { MessageSquare, Heart, Share2 } from 'lucide-react';
 export default function Home() {
   const [posts, setPosts] = useState([]);
   const navigate = useNavigate();
-  const user = auth.currentUser;
+  const userId = auth.currentUser?.uid;
 
   useEffect(() => {
     const q = query(collection(db, 'posts'), orderBy('createdAt', 'desc'));
@@ -18,30 +17,26 @@ export default function Home() {
     return unsubscribe;
   }, []);
 
-  const handleLike = async (post) => {
-    if (!user) return alert("You must be logged in");
-    const postRef = doc(db, 'posts', post.id);
-    const alreadyLiked = post.likes?.includes(user.uid);
-    await updateDoc(postRef, {
-      likes: alreadyLiked
-        ? arrayRemove(user.uid)
-        : arrayUnion(user.uid)
-    });
-  };
-
-  const handleComment = async (postId) => {
-    const text = prompt("Enter your comment:");
-    if (!text || !user) return;
+  const toggleLike = async (postId, likes) => {
     const postRef = doc(db, 'posts', postId);
-    await updateDoc(postRef, {
-      comments: arrayUnion({ userId: user.uid, text })
-    });
+    if (likes?.includes(userId)) {
+      await updateDoc(postRef, {
+        likes: arrayRemove(userId),
+      });
+    } else {
+      await updateDoc(postRef, {
+        likes: arrayUnion(userId),
+      });
+    }
   };
 
-  const handleShare = async (postId) => {
-    const url = `${window.location.origin}/post/${postId}`;
-    await navigator.clipboard.writeText(url);
-    alert("Post link copied to clipboard!");
+  const handleShare = async (url) => {
+    try {
+      await navigator.clipboard.writeText(url);
+      alert('Post URL copied to clipboard!');
+    } catch (err) {
+      alert('Failed to copy!');
+    }
   };
 
   return (
@@ -65,27 +60,29 @@ export default function Home() {
           <p className="mt-2 text-sm text-gray-700">{post.caption}</p>
 
           {/* Action Buttons */}
-          <div className="flex space-x-4 mt-2">
-            <button onClick={() => handleLike(post)}>
+          <div className="flex items-center gap-4 mt-2">
+            <button onClick={() => toggleLike(post.id, post.likes)}>
               <Heart
-                className={`w-5 h-5 ${post.likes?.includes(user?.uid) ? 'text-red-500' : 'text-gray-500'}`}
-                fill={post.likes?.includes(user?.uid) ? 'red' : 'none'}
+                className={`w-5 h-5 ${post.likes?.includes(userId) ? 'text-red-500' : 'text-gray-500'}`}
+                fill={post.likes?.includes(userId) ? 'red' : 'none'}
               />
             </button>
-            <button onClick={() => handleComment(post.id)}>
+
+            <button onClick={() => navigate(`/post/${post.id}/comments`)}>
               <MessageSquare className="w-5 h-5 text-gray-500" />
             </button>
-            <button onClick={() => handleShare(post.id)}>
+
+            <button onClick={() => handleShare(post.url)}>
               <Share2 className="w-5 h-5 text-gray-500" />
             </button>
           </div>
 
-          {/* Stats */}
-          <div className="text-xs text-gray-500 mt-1">
-            {post.likes?.length || 0} likes · {post.comments?.length || 0} comments
-          </div>
+          {/* Like Count */}
+          <p className="text-sm mt-1 text-gray-600">
+            {post.likes?.length || 0} likes
+          </p>
         </div>
       ))}
     </div>
   );
-          }
+}
