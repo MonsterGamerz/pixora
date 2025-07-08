@@ -10,7 +10,6 @@ import {
 import Home from './pages/Home';
 import Upload from './pages/Upload';
 import Stories from './pages/Stories';
-import Reels from './pages/Reels';
 import Chat from './pages/Chat';
 import Account from './pages/Account';
 import EditProfile from './pages/EditProfile';
@@ -18,7 +17,9 @@ import CommentsPage from './pages/CommentsPage';
 import Search from './pages/Search';
 import Signup from './pages/Signup';
 import Login from './pages/Login';
+import Reels from './pages/Reels';
 import BottomNav from './components/BottomNav';
+
 import { auth } from './firebase';
 
 export default function App() {
@@ -37,7 +38,7 @@ export default function App() {
 
   return (
     <Router>
-      <div className="pb-16">
+      <div className="pb-20">
         <Routes>
           {/* Public */}
           <Route path="/signup" element={!user ? <Signup /> : <Navigate to="/" />} />
@@ -53,7 +54,7 @@ export default function App() {
           <Route path="/account/:id?" element={user ? <Account /> : <Navigate to="/login" />} />
           <Route path="/edit-profile" element={user ? <EditProfile /> : <Navigate to="/login" />} />
           <Route path="/post/:id/comments" element={user ? <CommentsPage /> : <Navigate to="/login" />} />
-          <Route path="*" element={<Navigate to={user ? '/' : '/login'} />} />
+          <Route path="*" element={<Navigate to={user ? "/" : "/login"} />} />
         </Routes>
 
         {user && <BottomNav />}
