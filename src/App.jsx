@@ -1,71 +1,55 @@
-import React, { useEffect, useState } from 'react';
-import { Routes, Route, useLocation, Navigate } from 'react-router-dom';
-import { onAuthStateChanged } from 'firebase/auth';
-import { auth, db } from './firebase';
-import { doc, getDoc } from 'firebase/firestore';
-
-import Home from './pages/Home';
-import Upload from './pages/Upload';
-import Reels from './pages/Reels';
-import Chat from './pages/Chat';
-import Login from './pages/Login';
-import Signup from './pages/Signup';
-import Account from './pages/Account';
-import EditProfile from './pages/EditProfile';
-import CommentsPage from './pages/CommentsPage';
-import Search from './pages/Search';
-import BottomNav from './components/BottomNav';
+// src/App.jsx
+import React from 'react';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import Home from './pages/Home.jsx';
+import Login from './pages/Login.jsx';
+import Signup from './pages/Signup.jsx';
+import Upload from './pages/Upload.jsx';
+import Profile from './pages/Profile.jsx';
+import EditProfile from './pages/EditProfile.jsx';
+import Account from './pages/Account.jsx';
+import Accounts from './pages/Accounts.jsx';
+import Reels from './pages/Reels.jsx';
+import Posts from './pages/Posts.jsx';
+import Stories from './pages/Stories.jsx';
+import StoryUpload from './pages/StoryUpload.jsx';
+import Chat from './pages/Chat.jsx';
+import Search from './pages/Search.jsx';
+import Pro from './pages/Pro.jsx';
+import CommentsPage from './pages/CommentsPage.jsx';
+import StoryViewer from './components/StoryViewer.jsx';
+import Comments from './components/Comments.jsx';
+import BottomNav from './components/BottomNav.jsx';
+import LoadingScreen from './components/LoadingScreen.jsx';
 
 export default function App() {
-  const location = useLocation();
-  const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true);
-
-  // Auth listener
-  useEffect(() => {
-    const unsub = onAuthStateChanged(auth, async (user) => {
-      if (user) {
-        const userDoc = await getDoc(doc(db, 'users', user.uid));
-        setUser({ ...user, ...userDoc.data() });
-      } else {
-        setUser(null);
-      }
-      setLoading(false);
-    });
-    return () => unsub();
-  }, []);
-
-  if (loading) {
-    return (
-      <div className="flex justify-center items-center h-screen bg-black text-white">
-        Loading your account...
-      </div>
-    );
-  }
-
-  // Show only Login/Signup if not authenticated
-  if (!user && location.pathname !== '/login' && location.pathname !== '/signup') {
-    return <Navigate to="/login" />;
-  }
-
   return (
-    <div className="bg-black text-white min-h-screen">
-      <Routes>
-        <Route path="/" element={<Home />} />
-        <Route path="/upload" element={<Upload />} />
-        <Route path="/reels" element={<Reels />} />
-        <Route path="/chat" element={<Chat />} />
-        <Route path="/search" element={<Search />} />
-        <Route path="/account" element={<Account />} />
-        <Route path="/edit-profile" element={<EditProfile />} />
-        <Route path="/post/:postId/comments" element={<CommentsPage />} />
-        <Route path="/login" element={<Login />} />
-        <Route path="/signup" element={<Signup />} />
-      </Routes>
+    <Router>
+      <div className="bg-black text-white min-h-screen">
+        <Routes>
+          <Route path="/" element={<Home />} />
+          <Route path="/login" element={<Login />} />
+          <Route path="/signup" element={<Signup />} />
+          <Route path="/upload" element={<Upload />} />
+          <Route path="/profile" element={<Profile />} />
+          <Route path="/edit-profile" element={<EditProfile />} />
+          <Route path="/account/:id" element={<Account />} />
+          <Route path="/accounts" element={<Accounts />} />
+          <Route path="/reels" element={<Reels />} />
+          <Route path="/posts" element={<Posts />} />
+          <Route path="/stories" element={<Stories />} />
+          <Route path="/story-upload" element={<StoryUpload />} />
+          <Route path="/chat" element={<Chat />} />
+          <Route path="/search" element={<Search />} />
+          <Route path="/pro" element={<Pro />} />
+          <Route path="/post/:id/comments" element={<CommentsPage />} />
+          <Route path="/viewer/:id" element={<StoryViewer />} />
+          <Route path="/comments-test" element={<Comments />} />
+        </Routes>
 
-      {/* Hide BottomNav on Login/Signup/StoryViewer */}
-      {!['/login', '/signup'].includes(location.pathname) &&
-        !location.pathname.startsWith('/stories/') && <BottomNav />}
-    </div>
+        {/* Persistent Bottom Navigation */}
+        <BottomNav />
+      </div>
+    </Router>
   );
 }
