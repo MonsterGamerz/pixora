@@ -1,41 +1,63 @@
 import React, { useEffect, useState } from 'react';
-import { collection, doc, onSnapshot, orderBy, query, updateDoc, arrayUnion, arrayRemove } from 'firebase/firestore';
+import {
+  collection,
+  onSnapshot,
+  orderBy,
+  query,
+  doc,
+  updateDoc,
+  arrayUnion,
+  arrayRemove,
+} from 'firebase/firestore';
 import { db, auth } from '../firebase';
 import { useNavigate } from 'react-router-dom';
-import { MessageSquare, Heart, Share2 } from 'lucide-react';
+import { MessageSquare, Heart, Share } from 'lucide-react';
 
 export default function Home() {
   const [posts, setPosts] = useState([]);
+  const [likes, setLikes] = useState({});
   const navigate = useNavigate();
-  const userId = auth.currentUser?.uid;
 
+  // Fetch posts
   useEffect(() => {
     const q = query(collection(db, 'posts'), orderBy('createdAt', 'desc'));
-    const unsubscribe = onSnapshot(q, (snapshot) => {
+    const unsub = onSnapshot(q, snapshot => {
       setPosts(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
     });
-    return unsubscribe;
+    return unsub;
   }, []);
 
-  const toggleLike = async (postId, likes) => {
+  // Fetch likes per post
+  useEffect(() => {
+    const unsub = onSnapshot(collection(db, 'posts'), snapshot => {
+      const likeData = {};
+      snapshot.forEach(doc => {
+        likeData[doc.id] = doc.data().likes || [];
+      });
+      setLikes(likeData);
+    });
+    return unsub;
+  }, []);
+
+  const toggleLike = async postId => {
+    const userId = auth.currentUser?.uid;
+    if (!userId) return;
     const postRef = doc(db, 'posts', postId);
-    if (likes?.includes(userId)) {
-      await updateDoc(postRef, {
-        likes: arrayRemove(userId),
-      });
-    } else {
-      await updateDoc(postRef, {
-        likes: arrayUnion(userId),
-      });
-    }
+    const isLiked = likes[postId]?.includes(userId);
+
+    await updateDoc(postRef, {
+      likes: isLiked
+        ? arrayRemove(userId)
+        : arrayUnion(userId),
+    });
   };
 
-  const handleShare = async (url) => {
+  const handleShare = async url => {
     try {
       await navigator.clipboard.writeText(url);
-      alert('Post URL copied to clipboard!');
-    } catch (err) {
-      alert('Failed to copy!');
+      alert('Link copied to clipboard!');
+    } catch (error) {
+      console.error('Failed to copy:', error);
     }
   };
 
@@ -59,27 +81,27 @@ export default function Home() {
           )}
           <p className="mt-2 text-sm text-gray-700">{post.caption}</p>
 
-          {/* Action Buttons */}
-          <div className="flex items-center gap-4 mt-2">
-            <button onClick={() => toggleLike(post.id, post.likes)}>
+          {/* Actions */}
+          <div className="flex items-center gap-4 mt-2 text-gray-700">
+            <button onClick={() => toggleLike(post.id)}>
               <Heart
-                className={`w-5 h-5 ${post.likes?.includes(userId) ? 'text-red-500' : 'text-gray-500'}`}
-                fill={post.likes?.includes(userId) ? 'red' : 'none'}
+                className={`w-5 h-5 ${
+                  likes[post.id]?.includes(auth.currentUser?.uid)
+                    ? 'text-red-500'
+                    : ''
+                }`}
               />
             </button>
-
             <button onClick={() => navigate(`/post/${post.id}/comments`)}>
-              <MessageSquare className="w-5 h-5 text-gray-500" />
+              <MessageSquare className="w-5 h-5" />
             </button>
-
             <button onClick={() => handleShare(post.url)}>
-              <Share2 className="w-5 h-5 text-gray-500" />
+              <Share className="w-5 h-5" />
             </button>
           </div>
 
-          {/* Like Count */}
-          <p className="text-sm mt-1 text-gray-600">
-            {post.likes?.length || 0} likes
+          <p className="text-xs text-gray-500 mt-1">
+            {likes[post.id]?.length || 0} likes
           </p>
         </div>
       ))}
