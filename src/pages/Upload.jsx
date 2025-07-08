@@ -1,4 +1,3 @@
-// src/pages/Upload.jsx
 import React, { useState } from 'react';
 import { db, auth } from '../firebase';
 import { collection, addDoc, serverTimestamp, doc, getDoc } from 'firebase/firestore';
@@ -12,29 +11,35 @@ export default function Upload() {
   const navigate = useNavigate();
 
   const handleUpload = async () => {
-    if (!file || !auth.currentUser) return alert("File or user not found.");
+    if (!file || !auth.currentUser) return alert("Missing file or user.");
     setUploading(true);
 
     try {
-      // Get username from Firestore
+      // Get username
       const userDoc = await getDoc(doc(db, 'users', auth.currentUser.uid));
-      const userData = userDoc.exists() ? userDoc.data() : {};
-      const username = userData.username || 'unknown';
+      const username = userDoc.exists() ? userDoc.data().username : 'unknown';
 
-      // Upload to Cloudinary
+      // Prepare file for Cloudinary
       const formData = new FormData();
       formData.append('file', file);
-      formData.append('upload_preset', 'pixora');
+      formData.append('upload_preset', 'pixora'); // must match Cloudinary preset
 
-      const res = await axios.post('https://api.cloudinary.com/v1_1/dmwwifdds/auto/upload', formData);
+      // Upload to Cloudinary
+      console.log('Uploading to Cloudinary...');
+      const res = await axios.post(
+        'https://api.cloudinary.com/v1_1/dmwwifdds/auto/upload',
+        formData
+      );
+      console.log('Upload success:', res.data);
+
       const fileURL = res.data.secure_url;
-      const fileType = file.type.startsWith('video') ? 'video' : 'image';
+      const type = file.type.startsWith('video') ? 'video' : 'image';
 
-      // Save post in Firestore
+      // Upload metadata to Firestore
       await addDoc(collection(db, 'posts'), {
         url: fileURL,
         caption,
-        type: fileType, // must be exactly "video" for Reels
+        type,
         username,
         userId: auth.currentUser.uid,
         createdAt: serverTimestamp(),
@@ -43,8 +48,8 @@ export default function Upload() {
 
       navigate('/');
     } catch (err) {
-      console.error("Upload failed:", err);
-      alert('Upload failed.');
+      console.error('Upload failed:', err);
+      alert('Upload failed: ' + err.message);
     } finally {
       setUploading(false);
     }
