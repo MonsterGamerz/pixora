@@ -1,7 +1,7 @@
 // src/pages/Search.jsx
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { collection, getDocs } from 'firebase/firestore';
-import { db } from '../firebase';
+import { db, auth } from '../firebase';
 import { useNavigate } from 'react-router-dom';
 
 export default function Search() {
@@ -9,26 +9,24 @@ export default function Search() {
   const [results, setResults] = useState([]);
   const navigate = useNavigate();
 
-  const handleSearch = async () => {
-    const usersSnapshot = await getDocs(collection(db, 'users'));
-    const users = usersSnapshot.docs.map(doc => doc.data());
-    const filtered = users.filter(user =>
-      user.username.toLowerCase().includes(query.toLowerCase())
-    );
+  const searchUsers = async () => {
+    const snapshot = await getDocs(collection(db, 'users'));
+    const filtered = snapshot.docs
+      .map(doc => doc.data())
+      .filter(user => user.username.toLowerCase().includes(query.toLowerCase()) && user.uid !== auth.currentUser.uid);
     setResults(filtered);
   };
 
   useEffect(() => {
-    if (query.trim()) handleSearch();
+    if (query.trim()) searchUsers();
     else setResults([]);
   }, [query]);
 
   return (
-    <div className="p-4 max-w-md mx-auto">
+    <div className="p-4">
       <input
-        type="text"
-        placeholder="Search by username"
-        className="w-full border p-2 mb-4 rounded"
+        className="w-full p-2 mb-4 border rounded"
+        placeholder="Search users..."
         value={query}
         onChange={(e) => setQuery(e.target.value)}
       />
@@ -36,10 +34,14 @@ export default function Search() {
       {results.map(user => (
         <div
           key={user.uid}
-          className="p-2 border-b cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800"
+          className="flex justify-between items-center mb-3 p-2 border rounded cursor-pointer hover:bg-gray-100"
           onClick={() => navigate(`/account/${user.uid}`)}
         >
-          <p>@{user.username}</p>
+          <div>
+            <p className="font-semibold">@{user.username}</p>
+            <p className="text-sm text-gray-500">{user.email}</p>
+          </div>
+          <span className="text-pink-500 text-sm">View</span>
         </div>
       ))}
     </div>
