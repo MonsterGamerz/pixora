@@ -1,82 +1,66 @@
 // src/pages/Account.jsx
-import React, { useEffect, useState } from 'react';
-import { useParams } from 'react-router-dom';
-import { doc, getDoc, updateDoc, arrayUnion, arrayRemove } from 'firebase/firestore';
-import { auth, db } from '../firebase';
+import React, { useEffect, useState } from 'react'
+import { useParams, Link } from 'react-router-dom'
+import { doc, getDoc, collection, query, where, getDocs } from 'firebase/firestore'
+import { db, auth } from '../firebase'
 
 export default function Account() {
-  const { uid } = useParams();
-  const [userData, setUserData] = useState(null);
-  const [isFollowing, setIsFollowing] = useState(false);
-  const currentUser = auth.currentUser;
+  const { id } = useParams()
+  const [user, setUser] = useState(null)
+  const [posts, setPosts] = useState([])
 
   useEffect(() => {
-    const fetchUser = async () => {
-      const userDoc = await getDoc(doc(db, 'users', uid));
-      if (userDoc.exists()) {
-        const data = userDoc.data();
-        setUserData(data);
-        setIsFollowing(data.followers?.includes(currentUser?.uid));
+    const load = async () => {
+      const userRef = doc(db, 'users', id)
+      const userSnap = await getDoc(userRef)
+
+      if (userSnap.exists()) {
+        setUser(userSnap.data())
       }
-    };
 
-    if (uid) fetchUser();
-  }, [uid, currentUser?.uid]);
+      const q = query(collection(db, 'posts'), where('userId', '==', id))
+      const snap = await getDocs(q)
+      setPosts(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })))
+    }
 
-  const handleFollow = async () => {
-    if (!currentUser || currentUser.uid === uid) return;
+    load()
+  }, [id])
 
-    const myRef = doc(db, 'users', currentUser.uid);
-    const theirRef = doc(db, 'users', uid);
-
-    await updateDoc(myRef, {
-      following: isFollowing ? arrayRemove(uid) : arrayUnion(uid)
-    });
-
-    await updateDoc(theirRef, {
-      followers: isFollowing ? arrayRemove(currentUser.uid) : arrayUnion(currentUser.uid)
-    });
-
-    setIsFollowing(!isFollowing);
-  };
-
-  if (!userData) return <p className="text-center mt-10 text-white">Loading...</p>;
+  if (!user) return <p className="text-white p-4">Loading user...</p>
 
   return (
-    <div className="p-4 text-white">
-      <div className="flex items-center space-x-4 mb-4">
+    <div className="text-white p-4">
+      <div className="flex items-center space-x-4">
         <img
-          src={userData.profilePic || '/default-avatar.png'}
-          className="w-16 h-16 rounded-full object-cover"
-          alt="profile"
+          src={user.profilePic || 'https://placehold.co/100x100'}
+          className="w-20 h-20 rounded-full object-cover"
         />
         <div>
-          <h2 className="text-lg font-semibold">@{userData.username}</h2>
-          <p className="text-sm text-gray-400">{userData.bio || 'No bio yet.'}</p>
+          <h2 className="text-xl font-bold">@{user.username}</h2>
+          <p className="text-sm text-gray-400">{user.bio || 'No bio'}</p>
+          {auth.currentUser?.uid === id && (
+            <Link
+              to="/edit-profile"
+              className="text-pink-400 hover:underline text-sm mt-2 block"
+            >
+              Edit Profile
+            </Link>
+          )}
         </div>
       </div>
 
-      <div className="flex space-x-4 mb-4">
-        <div>
-          <p className="font-bold">{userData.followers?.length || 0}</p>
-          <p className="text-xs text-gray-400">Followers</p>
-        </div>
-        <div>
-          <p className="font-bold">{userData.following?.length || 0}</p>
-          <p className="text-xs text-gray-400">Following</p>
+      <div className="mt-6">
+        <h3 className="text-lg font-semibold mb-2">Your Posts</h3>
+        <div className="grid grid-cols-2 gap-2">
+          {posts.map(p =>
+            p.type === 'image' ? (
+              <img key={p.id} src={p.url} alt="" className="w-full h-40 object-cover rounded" />
+            ) : (
+              <video key={p.id} src={p.url} className="w-full h-40 object-cover rounded" muted />
+            )
+          )}
         </div>
       </div>
-
-      {currentUser?.uid !== uid && (
-        <button
-          onClick={handleFollow}
-          className={`px-4 py-2 rounded font-semibold ${
-            isFollowing ? 'bg-gray-800 text-white' : 'bg-pink-600 text-white'
-          }`}
-        >
-          {isFollowing ? 'Unfollow' : 'Follow'}
-        </button>
-      )}
     </div>
-  );
+  )
 }
