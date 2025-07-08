@@ -5,38 +5,30 @@ import { useNavigate } from 'react-router-dom';
 
 export default function EditProfile() {
   const navigate = useNavigate();
+  const user = auth.currentUser;
+
   const [username, setUsername] = useState('');
   const [bio, setBio] = useState('');
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    const loadData = async () => {
-      const user = auth.currentUser;
-      if (!user) return;
-
-      const docRef = doc(db, 'users', user.uid);
-      const docSnap = await getDoc(docRef);
-      if (docSnap.exists()) {
-        const data = docSnap.data();
+    if (!user) return;
+    const fetchProfile = async () => {
+      const snap = await getDoc(doc(db, 'users', user.uid));
+      if (snap.exists()) {
+        const data = snap.data();
         setUsername(data.username || '');
         setBio(data.bio || '');
       }
     };
-
-    loadData();
-  }, []);
+    fetchProfile();
+  }, [user]);
 
   const handleSave = async () => {
-    const user = auth.currentUser;
-    if (!user || !username.trim()) return alert("Username required");
-
+    if (!username.trim()) return alert('Username cannot be empty');
     setLoading(true);
-    const docRef = doc(db, 'users', user.uid);
-    await updateDoc(docRef, {
-      username,
-      bio,
-    });
-
+    const ref = doc(db, 'users', user.uid);
+    await updateDoc(ref, { username, bio });
     setLoading(false);
     navigate(`/account`);
   };
@@ -49,20 +41,20 @@ export default function EditProfile() {
         placeholder="Username"
         className="w-full border p-2 mb-4 rounded"
         value={username}
-        onChange={(e) => setUsername(e.target.value)}
+        onChange={e => setUsername(e.target.value)}
       />
       <textarea
         placeholder="Bio"
         className="w-full border p-2 mb-4 rounded"
         value={bio}
-        onChange={(e) => setBio(e.target.value)}
+        onChange={e => setBio(e.target.value)}
       />
       <button
         onClick={handleSave}
         disabled={loading}
-        className="bg-blue-500 text-white px-4 py-2 rounded w-full"
+        className="w-full bg-blue-500 text-white py-2 rounded"
       >
-        {loading ? 'Saving...' : 'Save'}
+        {loading ? 'Saving...' : 'Save Changes'}
       </button>
     </div>
   );
