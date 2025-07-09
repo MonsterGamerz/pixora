@@ -12,6 +12,7 @@ import Stories from './pages/Stories';
 import StoryUpload from './pages/StoryUpload';
 import Chat from './pages/Chat';
 import ChatPage from './pages/ChatPage';
+import Inbox from './pages/Inbox';
 import Login from './pages/Login';
 import Signup from './pages/Signup';
 import Account from './pages/Account';
