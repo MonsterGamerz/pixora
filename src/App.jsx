@@ -19,8 +19,8 @@ import AI from './pages/AI';
 import Login from './pages/Login';
 import Signup from './pages/Signup';
 
-import { AuthProvider } from './context/AuthContext';
-import ProtectedRoute from './auth/ProtectedRoute';
+// import { AuthProvider } from './context/AuthContext';
+// import ProtectedRoute from './auth/ProtectedRoute';
 
 import BottomNav from './components/BottomNav';
 
