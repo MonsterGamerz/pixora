@@ -16,8 +16,8 @@ import Success from './pages/Success';
 import Inbox from './pages/Inbox';
 import AI from './pages/AI';
 
-import Login from './auth/Login';
-import Signup from './auth/Signup';
+import Login from './pages/Login';
+import Signup from './pages/Signup';
 
 import { AuthProvider } from './context/AuthContext';
 import ProtectedRoute from './auth/ProtectedRoute';
