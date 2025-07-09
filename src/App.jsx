@@ -11,6 +11,7 @@ import Reels from './pages/Reels';
 import Stories from './pages/Stories';
 import StoryUpload from './pages/StoryUpload';
 import Chat from './pages/Chat';
+import ChatPage from './pages/ChatPage';
 import Login from './pages/Login';
 import Signup from './pages/Signup';
 import Account from './pages/Account';
@@ -51,6 +52,7 @@ export default function App() {
           </>
         ) : (
           <>
+            <Route path="/chat/:chatId" element={<ChatPage />} />
             <Route path="/" element={<Home />} />
             <Route path="/upload" element={<Upload />} />
             <Route path="/reels" element={<Reels />} />
