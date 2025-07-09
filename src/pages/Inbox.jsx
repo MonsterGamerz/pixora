@@ -1,6 +1,14 @@
 // src/pages/Inbox.jsx
 import React, { useEffect, useState } from 'react';
-import { doc, getDoc } from 'firebase/firestore';
+import {
+  collection,
+  query,
+  where,
+  onSnapshot,
+  orderBy,
+  getDoc,
+  doc,
+} from 'firebase/firestore';
 import { db, auth } from '../firebase';
 import { useNavigate } from 'react-router-dom';
 
@@ -9,42 +17,60 @@ export default function Inbox() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    const fetchChats = async () => {
-      const meId = auth.currentUser?.uid;
-      const snap = await getDoc(doc(db, 'users', meId));
-      const data = snap.data();
-      const chatIds = data?.chats || [];
-      setChats(chatIds);
-    };
-    fetchChats();
+    if (!auth.currentUser) return;
+
+    const q = query(
+      collection(db, 'chats'),
+      where('users', 'array-contains', auth.currentUser.uid),
+      orderBy('lastMessage.timestamp', 'desc')
+    );
+
+    const unsub = onSnapshot(q, async (snapshot) => {
+      const chatsData = await Promise.all(
+        snapshot.docs.map(async (docSnap) => {
+          const data = docSnap.data();
+          const otherUserId = data.users.find(
+            (uid) => uid !== auth.currentUser.uid
+          );
+          const userDoc = await getDoc(doc(db, 'users', otherUserId));
+          return {
+            id: docSnap.id,
+            ...data,
+            otherUser: userDoc.exists() ? userDoc.data() : { username: 'Unknown' },
+          };
+        })
+      );
+      setChats(chatsData);
+    });
+
+    return unsub;
   }, []);
 
-  const getOtherUserId = (chatId) => {
-    const ids = chatId.split('_');
-    return ids.find(id => id !== auth.currentUser.uid);
-  };
-
-  const goToChat = (chatId) => {
+  const openChat = (chatId) => {
     navigate(`/chat/${chatId}`);
   };
 
   return (
-    <div className="p-4 text-white bg-black h-screen">
-      <h1 className="text-xl font-bold mb-4">Inbox</h1>
-      <ul className="space-y-2">
-        {chats.map(chatId => {
-          const otherId = getOtherUserId(chatId);
-          return (
+    <div className="p-4 text-white">
+      <h2 className="text-xl font-bold mb-4">Inbox</h2>
+      {chats.length === 0 ? (
+        <p className="text-gray-400">No conversations yet.</p>
+      ) : (
+        <ul className="space-y-4">
+          {chats.map((chat) => (
             <li
-              key={chatId}
-              onClick={() => goToChat(chatId)}
-              className="bg-gray-800 p-3 rounded cursor-pointer hover:bg-gray-700"
+              key={chat.id}
+              onClick={() => openChat(chat.id)}
+              className="bg-zinc-800 p-3 rounded-lg cursor-pointer hover:bg-zinc-700 transition"
             >
-              Chat with: <span className="font-bold">{otherId}</span>
+              <p className="font-semibold">@{chat.otherUser.username}</p>
+              <p className="text-sm text-gray-400 truncate">
+                {chat.lastMessage?.text || 'No messages yet'}
+              </p>
             </li>
-          );
-        })}
-      </ul>
+          ))}
+        </ul>
+      )}
     </div>
   );
 }
