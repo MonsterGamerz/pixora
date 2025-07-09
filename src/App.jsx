@@ -26,7 +26,6 @@ import BottomNav from './components/BottomNav';
 
 function App() {
   return (
-    <AuthProvider>
       <Router>
         <div className="pb-16"> {/* Bottom padding for BottomNav */}
           <Routes>
@@ -52,7 +51,6 @@ function App() {
 
         <BottomNav />
       </Router>
-    </AuthProvider>
   );
 }
 
