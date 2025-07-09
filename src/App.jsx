@@ -1,76 +1,59 @@
-// src/App.jsx
-import React, { useEffect, useState } from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { onAuthStateChanged } from 'firebase/auth';
-import { auth } from './firebase';
+import React from 'react';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 
-// Pages
 import Home from './pages/Home';
 import Upload from './pages/Upload';
 import Reels from './pages/Reels';
-import Stories from './pages/Stories';
-import StoryUpload from './pages/StoryUpload';
 import Chat from './pages/Chat';
-import ChatPage from './pages/ChatPage';
-import Inbox from './pages/Inbox';
-import Login from './pages/Login';
-import Signup from './pages/Signup';
+import Profile from './pages/Profile';
+import StoryUpload from './pages/StoryUpload';
+import CommentsPage from './pages/CommentsPage';
+import EditProfile from './pages/EditProfile';
 import Account from './pages/Account';
 import Search from './pages/Search';
-import CommentsPage from './pages/CommentsPage';
 import Pro from './pages/Pro';
 import Success from './pages/Success';
+import Inbox from './pages/Inbox';
 import AI from './pages/AI';
 
-export default function App() {
-  const [user, setUser] = useState(null);
-  const [checkingAuth, setCheckingAuth] = useState(true);
+import Login from './auth/Login';
+import Signup from './auth/Signup';
 
-  useEffect(() => {
-    const unsub = onAuthStateChanged(auth, (firebaseUser) => {
-      setUser(firebaseUser);
-      setCheckingAuth(false);
-    });
-    return () => unsub();
-  }, []);
+import { AuthProvider } from './context/AuthContext';
+import ProtectedRoute from './auth/ProtectedRoute';
 
-  if (checkingAuth) {
-    return (
-      <div className="h-screen flex items-center justify-center bg-black text-white">
-        Loading...
-      </div>
-    );
-  }
+import BottomNav from './components/BottomNav';
 
+function App() {
   return (
-    <Router>
-      <Routes>
-        {!user ? (
-          <>
+    <AuthProvider>
+      <Router>
+        <div className="pb-16"> {/* Bottom padding for BottomNav */}
+          <Routes>
             <Route path="/login" element={<Login />} />
             <Route path="/signup" element={<Signup />} />
-            <Route path="*" element={<Navigate to="/login" />} />
-          </>
-        ) : (
-          <>
-            <Route path="/inbox" element={<Inbox />} />
-            <Route path="/chat/:chatId" element={<ChatPage />} />
-            <Route path="/" element={<Home />} />
-            <Route path="/upload" element={<Upload />} />
-            <Route path="/reels" element={<Reels />} />
-            <Route path="/stories" element={<Stories />} />
-            <Route path="/story/upload" element={<StoryUpload />} />
-            <Route path="/chat" element={<Chat />} />
-            <Route path="/account/:id" element={<Account />} />
-            <Route path="/search" element={<Search />} />
-            <Route path="/post/:postId/comments" element={<CommentsPage />} />
-            <Route path="/pro" element={<Pro />} />
-            <Route path="/success" element={<Success />} />
-            <Route path="/ai" element={<AI />} />
-            <Route path="*" element={<Navigate to="/" />} />
-          </>
-        )}
-      </Routes>
-    </Router>
+
+            <Route path="/" element={<ProtectedRoute><Home /></ProtectedRoute>} />
+            <Route path="/upload" element={<ProtectedRoute><Upload /></ProtectedRoute>} />
+            <Route path="/reels" element={<ProtectedRoute><Reels /></ProtectedRoute>} />
+            <Route path="/chat" element={<ProtectedRoute><Chat /></ProtectedRoute>} />
+            <Route path="/profile/:userId" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+            <Route path="/story-upload" element={<ProtectedRoute><StoryUpload /></ProtectedRoute>} />
+            <Route path="/comments/:postId" element={<ProtectedRoute><CommentsPage /></ProtectedRoute>} />
+            <Route path="/edit-profile" element={<ProtectedRoute><EditProfile /></ProtectedRoute>} />
+            <Route path="/account" element={<ProtectedRoute><Account /></ProtectedRoute>} />
+            <Route path="/search" element={<ProtectedRoute><Search /></ProtectedRoute>} />
+            <Route path="/pro" element={<ProtectedRoute><Pro /></ProtectedRoute>} />
+            <Route path="/success" element={<ProtectedRoute><Success /></ProtectedRoute>} />
+            <Route path="/inbox" element={<ProtectedRoute><Inbox /></ProtectedRoute>} />
+            <Route path="/ai" element={<ProtectedRoute><AI /></ProtectedRoute>} />
+          </Routes>
+        </div>
+
+        <BottomNav />
+      </Router>
+    </AuthProvider>
   );
 }
+
+export default App;
