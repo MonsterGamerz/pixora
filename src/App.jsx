@@ -53,6 +53,7 @@ export default function App() {
           </>
         ) : (
           <>
+            <Route path="/inbox" element={<Inbox />} />
             <Route path="/chat/:chatId" element={<ChatPage />} />
             <Route path="/" element={<Home />} />
             <Route path="/upload" element={<Upload />} />
