@@ -2,6 +2,7 @@ import React from "react";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 
 import Home from "./pages/Home";
+import Account from "./pages/Account";
 import Upload from "./pages/Upload";
 import Reels from "./pages/Reels";
 import Chat from "./pages/Chat";
