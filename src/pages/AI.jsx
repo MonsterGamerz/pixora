@@ -1,64 +1,67 @@
-import React, { useState } from "react";
+import React, { useState } from 'react';
 
 export default function AI() {
-  const [messages, setMessages] = useState([
-    { text: "Hey! I’m Pixora AI 🤖 — Ask me anything.", sender: "ai" },
-  ]);
-  const [input, setInput] = useState("");
+  const [input, setInput] = useState('');
+  const [messages, setMessages] = useState([]);
 
-  const sendMessage = () => {
+  const handleSend = async () => {
     if (!input.trim()) return;
 
-    const newMessages = [...messages, { text: input, sender: "user" }];
+    // Add user message
+    const newMessages = [...messages, { role: 'user', content: input }];
     setMessages(newMessages);
-    setInput("");
+    setInput('');
 
-    // Simulated AI reply (replace this with real backend later)
-    setTimeout(() => {
+    try {
+      const res = await fetch('/api/gpt', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ message: input }),
+      });
+
+      const data = await res.json();
+      const botReply = data.response;
+
+      setMessages((prev) => [...prev, { role: 'assistant', content: botReply }]);
+    } catch (err) {
+      console.error(err);
       setMessages((prev) => [
         ...prev,
-        { text: "I'm still learning! Full power soon. 💡", sender: "ai" },
+        { role: 'assistant', content: 'Something went wrong. Try again later.' },
       ]);
-    }, 1000);
-  };
-
-  const handleKeyDown = (e) => {
-    if (e.key === "Enter") sendMessage();
+    }
   };
 
   return (
-    <div className="flex flex-col h-screen bg-zinc-900 text-white">
-      <div className="p-4 text-xl font-bold border-b border-zinc-700">
-        Pixora AI Assistant 🤖
-      </div>
+    <div className="p-4 max-w-xl mx-auto flex flex-col h-screen">
+      <h1 className="text-2xl font-bold mb-4 text-center">Pixora AI Assistant</h1>
 
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
-        {messages.map((msg, idx) => (
+      <div className="flex-1 overflow-y-auto bg-gray-100 p-4 rounded-lg mb-4">
+        {messages.map((msg, index) => (
           <div
-            key={idx}
-            className={`max-w-[75%] p-3 rounded-xl ${
-              msg.sender === "user"
-                ? "ml-auto bg-blue-600 text-right"
-                : "mr-auto bg-zinc-800 text-left"
+            key={index}
+            className={`mb-2 p-2 rounded ${
+              msg.role === 'user' ? 'bg-blue-100 text-right' : 'bg-white text-left'
             }`}
           >
-            {msg.text}
+            <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
           </div>
         ))}
       </div>
 
-      <div className="flex p-3 border-t border-zinc-700 bg-zinc-800">
+      <div className="flex gap-2">
         <input
           type="text"
           value={input}
           onChange={(e) => setInput(e.target.value)}
-          onKeyDown={handleKeyDown}
-          placeholder="Ask me anything..."
-          className="flex-1 p-2 rounded-l-lg bg-zinc-700 text-white outline-none"
+          placeholder="Ask something..."
+          className="flex-1 p-2 rounded border"
         />
         <button
-          onClick={sendMessage}
-          className="px-4 bg-blue-600 rounded-r-lg hover:bg-blue-700"
+          onClick={handleSend}
+          className="bg-black text-white px-4 py-2 rounded"
         >
           Send
         </button>
