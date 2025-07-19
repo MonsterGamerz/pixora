@@ -1,88 +1,86 @@
-// src/pages/Chat.jsx
-import React, { useEffect, useState, useRef } from 'react';
-import {
-  collection,
-  doc,
-  onSnapshot,
-  addDoc,
-  serverTimestamp,
-  query,
-  orderBy,
-} from 'firebase/firestore';
+import React, { useEffect, useRef, useState } from 'react';
+import { db } from '../firebase';
 import { useParams } from 'react-router-dom';
-import { db, auth } from '../firebase';
+import { collection, addDoc, query, orderBy, onSnapshot } from 'firebase/firestore';
+import { useUser } from '../context/AuthContext';
+import MessageBubble from '../components/MessageBubble';
+import TypingIndicator from '../components/TypingIndicator';
 
-export default function Chat() {
-  const { id } = useParams(); // chatId from URL
+const Chat = () => {
+  const { id } = useParams(); // other user's UID
+  const { currentUser } = useUser();
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
-  const bottomRef = useRef(null);
+  const [isTyping, setIsTyping] = useState(false);
+  const messagesEndRef = useRef();
 
   useEffect(() => {
     const q = query(
-      collection(db, 'chats', id, 'messages'),
-      orderBy('timestamp')
+      collection(db, 'chats', getChatId(currentUser.uid, id), 'messages'),
+      orderBy('createdAt')
     );
 
-    const unsub = onSnapshot(q, (snap) => {
-      const msgs = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    const unsub = onSnapshot(q, (snapshot) => {
+      const msgs = snapshot.docs.map(doc => doc.data());
       setMessages(msgs);
+      scrollToBottom();
     });
 
-    return unsub;
+    return () => unsub();
   }, [id]);
 
-  useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
+  const handleSend = async () => {
+    if (!input.trim()) return;
 
-  const sendMessage = async (e) => {
-    e.preventDefault();
-    if (!input.trim() || !auth.currentUser) return;
-
-    await addDoc(collection(db, 'chats', id, 'messages'), {
-      text: input.trim(),
-      senderId: auth.currentUser.uid,
-      timestamp: serverTimestamp(),
+    await addDoc(collection(db, 'chats', getChatId(currentUser.uid, id), 'messages'), {
+      text: input,
+      senderId: currentUser.uid,
+      createdAt: new Date()
     });
 
     setInput('');
+    setIsTyping(false);
+  };
+
+  const handleTyping = (e) => {
+    setInput(e.target.value);
+    setIsTyping(true);
+
+    // Add logic to update typing status in Firebase here if needed
+    setTimeout(() => setIsTyping(false), 2000);
+  };
+
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
   return (
-    <div className="flex flex-col h-screen bg-zinc-900 text-white">
-      <header className="p-4 font-bold text-lg border-b border-zinc-700">Chat</header>
-
-      <div className="flex-1 p-4 overflow-y-scroll space-y-2">
-        {messages.map(msg => (
-          <div
-            key={msg.id}
-            className={`max-w-xs px-4 py-2 rounded-lg ${
-              msg.senderId === auth.currentUser?.uid
-                ? 'bg-pink-600 self-end ml-auto'
-                : 'bg-zinc-700 self-start mr-auto'
-            }`}
-          >
-            {msg.text}
-          </div>
+    <div className="p-4 h-screen overflow-y-scroll bg-background">
+      <div className="flex flex-col gap-2">
+        {messages.map((msg, idx) => (
+          <MessageBubble key={idx} message={msg} currentUser={currentUser} />
         ))}
-        <div ref={bottomRef} />
+        <div ref={messagesEndRef} />
       </div>
 
-      <form onSubmit={sendMessage} className="p-4 flex gap-2 border-t border-zinc-700">
+      {isTyping && <TypingIndicator />}
+
+      <div className="fixed bottom-0 left-0 w-full p-3 bg-white flex gap-2">
         <input
+          type="text"
+          className="flex-1 p-2 rounded-xl border"
+          placeholder="Type a message"
           value={input}
-          onChange={(e) => setInput(e.target.value)}
-          className="flex-1 p-2 rounded bg-zinc-800 text-white"
-          placeholder="Type your message..."
+          onChange={handleTyping}
         />
-        <button
-          type="submit"
-          className="px-4 py-2 bg-pink-600 text-white rounded hover:bg-pink-700 transition"
-        >
-          Send
-        </button>
-      </form>
+        <button onClick={handleSend} className="bg-blue-500 text-white px-4 rounded-xl">Send</button>
+      </div>
     </div>
   );
+};
+
+function getChatId(uid1, uid2) {
+  return uid1 < uid2 ? uid1 + '_' + uid2 : uid2 + '_' + uid1;
 }
+
+export default Chat;
