@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { db } from '../firebase';
 import { useParams } from 'react-router-dom';
 import { collection, addDoc, query, orderBy, onSnapshot } from 'firebase/firestore';
-import { useUser } from '../context/AuthContext';
+import { useAuth } from '../context/AuthContext';
 import MessageBubble from '../components/MessageBubble';
 import TypingIndicator from '../components/TypingIndicator';
 
