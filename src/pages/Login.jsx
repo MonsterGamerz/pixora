@@ -1,24 +1,28 @@
 // src/pages/Login.jsx
-import React, { useState } from 'react'
-import { signInWithEmailAndPassword } from 'firebase/auth'
-import { auth } from '../firebase'
-import { useNavigate, Link } from 'react-router-dom'
+import React, { useState } from 'react';
+import { signInWithEmailAndPassword } from 'firebase/auth';
+import { auth } from '../firebase';
+import { useNavigate, Link } from 'react-router-dom';
 
 export default function Login() {
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
-  const [error, setError] = useState('')
-  const navigate = useNavigate()
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+  const navigate = useNavigate();
 
   const handleLogin = async (e) => {
-    e.preventDefault()
+    e.preventDefault();
+    setError(''); // clear previous errors
+
     try {
-      await signInWithEmailAndPassword(auth, email, password)
-      navigate('/')
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      console.log('Logged in:', userCredential.user); // ✅ for debug
+      navigate('/'); // 🔁 redirect after login
     } catch (err) {
-      setError('Invalid credentials. Please try again.')
+      console.error('Login error:', err); // ✅ for debug
+      setError('Invalid credentials. Please try again.');
     }
-  }
+  };
 
   return (
     <div className="flex items-center justify-center min-h-screen bg-black text-white">
@@ -60,5 +64,5 @@ export default function Login() {
         </p>
       </form>
     </div>
-  )
+  );
 }
