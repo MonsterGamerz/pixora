@@ -1,49 +1,73 @@
-// src/pages/Search.jsx
-import React, { useEffect, useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { db } from '../firebase';
 import { collection, getDocs } from 'firebase/firestore';
-import { db, auth } from '../firebase';
-import { useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 
-export default function Search() {
-  const [query, setQuery] = useState('');
-  const [results, setResults] = useState([]);
-  const navigate = useNavigate();
-
-  const searchUsers = async () => {
-    const snapshot = await getDocs(collection(db, 'users'));
-    const filtered = snapshot.docs
-      .map(doc => doc.data())
-      .filter(user => user.username.toLowerCase().includes(query.toLowerCase()) && user.uid !== auth.currentUser.uid);
-    setResults(filtered);
-  };
+const SearchPage = () => {
+  const [search, setSearch] = useState('');
+  const [allUsers, setAllUsers] = useState([]);
+  const [filteredUsers, setFilteredUsers] = useState([]);
 
   useEffect(() => {
-    if (query.trim()) searchUsers();
-    else setResults([]);
-  }, [query]);
+    const fetchUsers = async () => {
+      const snapshot = await getDocs(collection(db, 'users'));
+      const users = snapshot.docs.map(doc => ({ uid: doc.id, ...doc.data() }));
+      setAllUsers(users);
+    };
+    fetchUsers();
+  }, []);
+
+  useEffect(() => {
+    const s = search.toLowerCase();
+    const results = allUsers.filter((user) =>
+      user.username?.toLowerCase().includes(s)
+    );
+    setFilteredUsers(results);
+  }, [search, allUsers]);
 
   return (
-    <div className="p-4">
+    <div className="max-w-md mx-auto p-4">
+      <h2 className="text-2xl font-bold mb-4 text-center dark:text-white">Search Users</h2>
+
       <input
-        className="w-full p-2 mb-4 border rounded"
-        placeholder="Search users..."
-        value={query}
-        onChange={(e) => setQuery(e.target.value)}
+        type="text"
+        placeholder="Search by username..."
+        value={search}
+        onChange={(e) => setSearch(e.target.value)}
+        className="w-full p-2 mb-4 border rounded-xl dark:bg-gray-800 dark:text-white"
       />
 
-      {results.map(user => (
-        <div
-          key={user.uid}
-          className="flex justify-between items-center mb-3 p-2 border rounded cursor-pointer hover:bg-gray-100"
-          onClick={() => navigate(`/account/${user.uid}`)}
-        >
-          <div>
-            <p className="font-semibold">@{user.username}</p>
-            <p className="text-sm text-gray-500">{user.email}</p>
-          </div>
-          <span className="text-pink-500 text-sm">View</span>
-        </div>
-      ))}
+      <div className="space-y-3">
+        {filteredUsers.map((user) => (
+          <Link
+            to={`/account/${user.uid}`}
+            key={user.uid}
+            className="flex items-center gap-3 p-2 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition"
+          >
+            <img
+              src={user.profilePic || '/default-avatar.png'}
+              alt="Profile"
+              className="w-12 h-12 rounded-full object-cover"
+            />
+            <div>
+              <p className="font-semibold dark:text-white">{user.username}</p>
+              {user.bio && (
+                <p className="text-sm text-gray-500 dark:text-gray-400 line-clamp-1">
+                  {user.bio}
+                </p>
+              )}
+            </div>
+          </Link>
+        ))}
+
+        {filteredUsers.length === 0 && (
+          <p className="text-center text-gray-500 dark:text-gray-400">
+            No users found.
+          </p>
+        )}
+      </div>
     </div>
   );
-}
+};
+
+export default SearchPage;
