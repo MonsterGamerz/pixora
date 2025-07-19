@@ -1,116 +1,118 @@
 import React, { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
-import {
-  collection,
-  addDoc,
-  onSnapshot,
-  orderBy,
-  query,
-  serverTimestamp,
-  doc,
-  deleteDoc,
-  getDoc,
-} from 'firebase/firestore';
 import { db, auth } from '../firebase';
-import moment from 'moment';
+import {
+  doc, getDoc, addDoc, collection, query, orderBy, onSnapshot, serverTimestamp
+} from 'firebase/firestore';
+import { Link } from 'react-router-dom';
 
-export default function CommentsPage() {
-  const { id } = useParams(); // post ID
+const CommentPage = () => {
+  const { postId } = useParams();
+  const [post, setPost] = useState(null);
   const [comments, setComments] = useState([]);
-  const [text, setText] = useState('');
+  const [newComment, setNewComment] = useState('');
+  const [userData, setUserData] = useState({});
+
+  const user = auth.currentUser;
 
   useEffect(() => {
+    if (!postId) return;
+
+    const fetchPost = async () => {
+      const docSnap = await getDoc(doc(db, 'posts', postId));
+      if (docSnap.exists()) setPost(docSnap.data());
+    };
+
     const q = query(
-      collection(db, 'posts', id, 'comments'),
-      orderBy('createdAt', 'asc')
+      collection(db, 'posts', postId, 'comments'),
+      orderBy('timestamp', 'asc')
     );
-    const unsub = onSnapshot(q, async (snapshot) => {
-      const commentData = await Promise.all(
-        snapshot.docs.map(async (docSnap) => {
-          const data = docSnap.data();
-          const userSnap = await getDoc(doc(db, 'users', data.userId));
-          const userData = userSnap.exists() ? userSnap.data() : {};
-          return {
-            id: docSnap.id,
-            ...data,
-            username: userData.username || 'Unknown',
-            photoURL: userData.photoURL || '',
-          };
-        })
-      );
-      setComments(commentData);
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      setComments(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
     });
 
-    return unsub;
-  }, [id]);
+    fetchPost();
+    return () => unsubscribe();
+  }, [postId]);
+
+  useEffect(() => {
+    if (user?.uid) {
+      const fetchUser = async () => {
+        const docSnap = await getDoc(doc(db, 'users', user.uid));
+        if (docSnap.exists()) setUserData(docSnap.data());
+      };
+      fetchUser();
+    }
+  }, [user]);
 
   const handleComment = async () => {
-    const userId = auth.currentUser?.uid;
-    if (!text.trim() || !userId) return;
+    if (!newComment.trim()) return;
 
-    await addDoc(collection(db, 'posts', id, 'comments'), {
-      text,
-      userId,
-      createdAt: serverTimestamp(),
+    await addDoc(collection(db, 'posts', postId, 'comments'), {
+      text: newComment.trim(),
+      uid: user.uid,
+      username: userData.username || 'User',
+      userPic: userData.profilePic || '',
+      timestamp: serverTimestamp(),
     });
 
-    setText('');
-  };
-
-  const handleDelete = async (commentId) => {
-    await deleteDoc(doc(db, 'posts', id, 'comments', commentId));
+    setNewComment('');
   };
 
   return (
-    <div className="p-4 max-w-md mx-auto">
-      <h1 className="text-xl font-bold mb-4">Comments</h1>
-
-      {/* Comments List */}
-      {comments.map((comment) => (
-        <div key={comment.id} className="flex items-start gap-2 mb-3">
-          <img
-            src={comment.photoURL || '/default-avatar.png'}
-            alt="avatar"
-            className="w-8 h-8 rounded-full object-cover"
-          />
-          <div className="flex-1 bg-gray-100 p-2 rounded">
-            <div className="flex justify-between items-center">
-              <p className="text-sm font-semibold">@{comment.username}</p>
-              {comment.createdAt?.seconds && (
-                <span className="text-xs text-gray-500">
-                  {moment(comment.createdAt.toDate()).fromNow()}
-                </span>
-              )}
-            </div>
-            <p className="text-sm">{comment.text}</p>
-            {auth.currentUser?.uid === comment.userId && (
-              <button
-                className="text-red-500 text-xs mt-1"
-                onClick={() => handleDelete(comment.id)}
-              >
-                Delete
-              </button>
-            )}
-          </div>
+    <div className="max-w-xl mx-auto p-4">
+      {post && (
+        <div className="mb-4 rounded-lg overflow-hidden">
+          {post.mediaUrl.includes('video') ? (
+            <video src={post.mediaUrl} controls className="w-full rounded-lg" />
+          ) : (
+            <img src={post.mediaUrl} alt="Post" className="w-full rounded-lg" />
+          )}
         </div>
-      ))}
+      )}
 
-      {/* Comment Box */}
-      <div className="mt-4 flex items-center gap-2">
-        <input
-          type="text"
-          className="flex-1 border rounded p-2"
-          placeholder="Add a comment..."
-          value={text}
-          onChange={(e) => setText(e.target.value)}
-        />
-        <button
-          onClick={handleComment}
-          className="bg-blue-500 text-white px-3 py-2 rounded"
-        >
-          Post
-        </button>
+      <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-md p-4">
+        <h2 className="text-xl font-bold mb-3 dark:text-white">Comments</h2>
+
+        <div className="space-y-4 max-h-96 overflow-y-auto">
+          {comments.map((comment) => (
+            <div key={comment.id} className="flex items-start gap-3">
+              <Link to={`/account/${comment.uid}`}>
+                <img
+                  src={comment.userPic || '/default-avatar.png'}
+                  alt="User"
+                  className="w-10 h-10 rounded-full object-cover"
+                />
+              </Link>
+              <div>
+                <Link to={`/account/${comment.uid}`} className="font-bold dark:text-white">
+                  {comment.username}
+                </Link>
+                <p className="text-sm dark:text-gray-300">{comment.text}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <div className="mt-4 flex gap-2">
+          <input
+            type="text"
+            placeholder="Write a comment..."
+            value={newComment}
+            onChange={(e) => setNewComment(e.target.value)}
+            className="flex-1 p-2 border rounded-lg dark:bg-gray-800 dark:text-white"
+          />
+          <button
+            onClick={handleComment}
+            className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg"
+          >
+            Send
+          </button>
+        </div>
       </div>
     </div>
   );
-}
+};
+
+export default CommentPage;
