@@ -9,6 +9,11 @@ import {
   updateDoc,
   arrayUnion,
   arrayRemove,
+  collection,
+  query,
+  where,
+  getDocs,
+  orderBy,
 } from "firebase/firestore";
 
 export default function Account() {
@@ -17,10 +22,12 @@ export default function Account() {
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
   const [isFollowing, setIsFollowing] = useState(false);
+  const [posts, setPosts] = useState([]);
 
   useEffect(() => {
     const fetchProfile = async () => {
       try {
+        // Map username -> uid
         const userMapRef = doc(db, "usernames", username);
         const userMapSnap = await getDoc(userMapRef);
 
@@ -38,6 +45,7 @@ export default function Account() {
           const data = userSnap.data();
           setProfile({ ...data, uid });
 
+          // Check if current user is following
           if (user) {
             const currentUserRef = doc(db, "users", user.uid);
             const currentUserSnap = await getDoc(currentUserRef);
@@ -48,6 +56,17 @@ export default function Account() {
               setIsFollowing(true);
             }
           }
+
+          // Fetch posts for this user
+          const postsRef = collection(db, "posts");
+          const q = query(postsRef, where("uid", "==", uid), orderBy("createdAt", "desc"));
+          const querySnap = await getDocs(q);
+
+          const postsData = querySnap.docs.map((doc) => ({
+            id: doc.id,
+            ...doc.data(),
+          }));
+          setPosts(postsData);
         } else {
           setProfile(null);
         }
@@ -105,6 +124,7 @@ export default function Account() {
 
   return (
     <div className="flex flex-col items-center min-h-screen bg-black text-white p-6">
+      {/* Profile Info */}
       <img
         src={profile.photoURL || "https://via.placeholder.com/100"}
         alt="Profile"
@@ -144,6 +164,30 @@ export default function Account() {
           {isFollowing ? "Unfollow" : "Follow"}
         </button>
       )}
+
+      {/* User Posts */}
+      <div className="mt-10 w-full max-w-2xl">
+        <h3 className="text-xl font-bold mb-4 text-center">
+          {isOwnProfile ? "Your Posts" : `${profile.username}'s Posts`}
+        </h3>
+        {posts.length > 0 ? (
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+            {posts.map((post) => (
+              <div key={post.id} className="bg-gray-800 rounded-lg overflow-hidden">
+                <img
+                  src={post.mediaUrl}
+                  alt="Post"
+                  className="w-full h-40 object-cover"
+                />
+                <p className="p-2 text-sm">{post.caption}</p>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="text-gray-400 text-center">No posts yet.</p>
+        )}
+      </div>
     </div>
   );
 }
+
