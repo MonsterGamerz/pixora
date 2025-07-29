@@ -1,109 +1,110 @@
-import React, { useEffect, useState } from 'react';
-import { useParams, Link } from 'react-router-dom';
-import { db, auth } from '../firebase';
-import { doc, getDoc, updateDoc, arrayUnion, arrayRemove, onSnapshot, collection, query, where } from 'firebase/firestore';
+// src/pages/Account.jsx
+import React, { useEffect, useState } from "react";
+import { useParams, useNavigate, Link } from "react-router-dom";
+import { doc, getDoc, updateDoc, arrayUnion, arrayRemove } from "firebase/firestore";
+import { db } from "../firebase";
+import { useAuth } from "../context/AuthContext";
 
-const Account = () => {
-  const { uid } = useParams(); // /account/:uid
-  const [userData, setUserData] = useState({});
-  const [isCurrentUser, setIsCurrentUser] = useState(false);
+export default function Account() {
+  const { username } = useParams();
+  const { user } = useAuth();
+  const navigate = useNavigate();
+
+  const [profile, setProfile] = useState(null);
   const [isFollowing, setIsFollowing] = useState(false);
-  const [userPosts, setUserPosts] = useState([]);
-
-  const currentUserId = auth.currentUser?.uid;
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!uid || !currentUserId) return;
+    const fetchProfile = async () => {
+      try {
+        const userRef = doc(db, "usernames", username); // 👈 mapping usernames → uid
+        const userSnap = await getDoc(userRef);
 
-    const fetchUser = async () => {
-      const userRef = doc(db, 'users', uid);
-      const userSnap = await getDoc(userRef);
-      if (userSnap.exists()) {
-        setUserData(userSnap.data());
-        setIsCurrentUser(uid === currentUserId);
-        setIsFollowing(userSnap.data()?.followers?.includes(currentUserId));
+        if (userSnap.exists()) {
+          const { uid } = userSnap.data();
+          const profileRef = doc(db, "users", uid);
+          const profileSnap = await getDoc(profileRef);
+
+          if (profileSnap.exists()) {
+            setProfile({ uid, ...profileSnap.data() });
+
+            // check if current user follows them
+            if (user) {
+              setIsFollowing(profileSnap.data().followers.includes(user.uid));
+            }
+          }
+        } else {
+          console.log("Profile not found");
+        }
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setLoading(false);
       }
     };
 
-    const q = query(collection(db, 'posts'), where('uid', '==', uid));
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      setUserPosts(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-    });
+    fetchProfile();
+  }, [username, user]);
 
-    fetchUser();
-    return () => unsubscribe();
-  }, [uid, currentUserId]);
+  const handleFollow = async () => {
+    if (!user) return navigate("/login");
 
-  const handleFollowToggle = async () => {
-    const userRef = doc(db, 'users', uid);
-    const currentUserRef = doc(db, 'users', currentUserId);
+    try {
+      const targetRef = doc(db, "users", profile.uid);
+      const currentRef = doc(db, "users", user.uid);
 
-    if (isFollowing) {
-      await updateDoc(userRef, { followers: arrayRemove(currentUserId) });
-      await updateDoc(currentUserRef, { following: arrayRemove(uid) });
-    } else {
-      await updateDoc(userRef, { followers: arrayUnion(currentUserId) });
-      await updateDoc(currentUserRef, { following: arrayUnion(uid) });
+      if (isFollowing) {
+        await updateDoc(targetRef, { followers: arrayRemove(user.uid) });
+        await updateDoc(currentRef, { following: arrayRemove(profile.uid) });
+        setIsFollowing(false);
+      } else {
+        await updateDoc(targetRef, { followers: arrayUnion(user.uid) });
+        await updateDoc(currentRef, { following: arrayUnion(profile.uid) });
+        setIsFollowing(true);
+      }
+    } catch (err) {
+      console.error(err);
     }
-
-    setIsFollowing(!isFollowing);
   };
 
+  if (loading) {
+    return <div className="text-center text-white mt-20">Loading profile...</div>;
+  }
+
+  if (!profile) {
+    return <div className="text-center text-red-500 mt-20">User not found</div>;
+  }
+
   return (
-    <div className="max-w-3xl mx-auto p-4">
-      <div className="flex flex-col items-center bg-white dark:bg-gray-900 p-6 rounded-2xl shadow-lg">
-        <img
-          src={userData.profilePic || '/default-avatar.png'}
-          className="w-24 h-24 rounded-full object-cover mb-2"
-          alt="Profile"
-        />
-        <h2 className="text-xl font-bold dark:text-white">{userData.username}</h2>
-        <p className="text-gray-600 dark:text-gray-300 text-center">{userData.bio}</p>
+    <div className="flex flex-col items-center p-6 text-white">
+      <img
+        src={profile.photoURL || "https://via.placeholder.com/100"}
+        alt="Profile"
+        className="w-24 h-24 rounded-full object-cover border-2 border-pink-500"
+      />
+      <h2 className="mt-4 text-xl font-bold">{profile.username}</h2>
+      <p className="text-gray-400">{profile.bio || "No bio yet"}</p>
 
-        <div className="flex gap-6 mt-4 text-center">
-          <div>
-            <p className="text-lg font-bold dark:text-white">{userPosts.length}</p>
-            <p className="text-sm text-gray-500">Posts</p>
-          </div>
-          <div>
-            <p className="text-lg font-bold dark:text-white">{userData.followers?.length || 0}</p>
-            <p className="text-sm text-gray-500">Followers</p>
-          </div>
-          <div>
-            <p className="text-lg font-bold dark:text-white">{userData.following?.length || 0}</p>
-            <p className="text-sm text-gray-500">Following</p>
-          </div>
-        </div>
-
-        {isCurrentUser ? (
-          <Link to="/edit-profile" className="mt-4 bg-blue-500 text-white px-4 py-2 rounded-xl">
-            Edit Profile
-          </Link>
-        ) : (
-          <button
-            onClick={handleFollowToggle}
-            className={`mt-4 px-4 py-2 rounded-xl text-white ${
-              isFollowing ? 'bg-gray-500' : 'bg-blue-500'
-            }`}
-          >
-            {isFollowing ? 'Unfollow' : 'Follow'}
-          </button>
-        )}
+      <div className="flex gap-6 mt-4">
+        <p><span className="font-bold">{profile.followers.length}</span> Followers</p>
+        <p><span className="font-bold">{profile.following.length}</span> Following</p>
       </div>
 
-      <div className="grid grid-cols-3 gap-2 mt-6">
-        {userPosts.map((post) => (
-          <div key={post.id}>
-            {post.mediaUrl.includes('video') ? (
-              <video src={post.mediaUrl} className="w-full h-32 object-cover rounded-lg" controls />
-            ) : (
-              <img src={post.mediaUrl} className="w-full h-32 object-cover rounded-lg" alt="" />
-            )}
-          </div>
-        ))}
-      </div>
+      {user?.uid === profile.uid ? (
+        <Link
+          to="/edit-profile"
+          className="mt-4 px-4 py-2 bg-pink-600 rounded hover:bg-pink-700 transition"
+        >
+          Edit Profile
+        </Link>
+      ) : (
+        <button
+          onClick={handleFollow}
+          className="mt-4 px-4 py-2 bg-pink-600 rounded hover:bg-pink-700 transition"
+        >
+          {isFollowing ? "Unfollow" : "Follow"}
+        </button>
+      )}
     </div>
   );
-};
-
-export default Account;
+}
