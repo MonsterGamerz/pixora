@@ -1,9 +1,10 @@
 // src/pages/Signup.jsx
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { auth, db } from '../firebase';
 import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
 import { doc, setDoc } from 'firebase/firestore';
 import { Link, useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 
 export default function Signup() {
   const [email, setEmail] = useState('');
@@ -11,34 +12,32 @@ export default function Signup() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const navigate = useNavigate();
+  const { user } = useAuth();
+
+  // 🚀 redirect if already logged in
+  useEffect(() => {
+    if (user) navigate('/');
+  }, [user, navigate]);
 
   const handleSignup = async (e) => {
     e.preventDefault();
-    setError('');
-
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-      const user = userCredential.user;
+      const newUser = userCredential.user;
 
-      // Set display name
-      await updateProfile(user, { displayName: username });
-
-      // Save user data in Firestore
-      await setDoc(doc(db, 'users', user.uid), {
-        uid: user.uid,
-        username,
+      await updateProfile(newUser, { displayName: username });
+      await setDoc(doc(db, 'users', newUser.uid), {
         email,
+        username,
+        uid: newUser.uid,
         followers: [],
         following: [],
         bio: '',
-        createdAt: new Date(),
       });
 
-      console.log('✅ Account created:', user.uid);
-      navigate('/'); // redirect after signup
+      navigate('/');
     } catch (err) {
-      console.error('❌ Signup error:', err.message);
-      setError('Signup failed: ' + err.message);
+      setError(err.message);
     }
   };
 
