@@ -1,38 +1,46 @@
 // src/pages/Signup.jsx
-import React, { useState } from 'react'
-import { auth, db } from '../firebase'
-import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth'
-import { doc, setDoc } from 'firebase/firestore'
-import { Link, useNavigate } from 'react-router-dom'
+import React, { useState } from 'react';
+import { auth, db } from '../firebase';
+import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
+import { doc, setDoc } from 'firebase/firestore';
+import { Link, useNavigate } from 'react-router-dom';
 
 export default function Signup() {
-  const [email, setEmail] = useState('')
-  const [username, setUsername] = useState('')
-  const [password, setPassword] = useState('')
-  const [error, setError] = useState('')
-  const navigate = useNavigate()
+  const [email, setEmail] = useState('');
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+  const navigate = useNavigate();
 
   const handleSignup = async (e) => {
-    e.preventDefault()
-    try {
-      const userCredential = await createUserWithEmailAndPassword(auth, email, password)
-      const user = userCredential.user
+    e.preventDefault();
+    setError('');
 
-      await updateProfile(user, { displayName: username })
+    try {
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      const user = userCredential.user;
+
+      // Set display name
+      await updateProfile(user, { displayName: username });
+
+      // Save user data in Firestore
       await setDoc(doc(db, 'users', user.uid), {
-        email,
-        username,
         uid: user.uid,
+        username,
+        email,
         followers: [],
         following: [],
         bio: '',
-      })
+        createdAt: new Date(),
+      });
 
-      navigate('/')
+      console.log('✅ Account created:', user.uid);
+      navigate('/'); // redirect after signup
     } catch (err) {
-      setError(err.message)
+      console.error('❌ Signup error:', err.message);
+      setError('Signup failed: ' + err.message);
     }
-  }
+  };
 
   return (
     <div className="flex items-center justify-center min-h-screen bg-black text-white">
@@ -83,5 +91,5 @@ export default function Signup() {
         </p>
       </form>
     </div>
-  )
+  );
 }
