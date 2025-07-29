@@ -21,7 +21,6 @@ export default function Account() {
   useEffect(() => {
     const fetchProfile = async () => {
       try {
-        // Get UID from username
         const userMapRef = doc(db, "usernames", username);
         const userMapSnap = await getDoc(userMapRef);
 
@@ -32,8 +31,6 @@ export default function Account() {
         }
 
         const { uid } = userMapSnap.data();
-
-        // Get profile data
         const userRef = doc(db, "users", uid);
         const userSnap = await getDoc(userRef);
 
@@ -41,7 +38,6 @@ export default function Account() {
           const data = userSnap.data();
           setProfile({ ...data, uid });
 
-          // check if logged in user follows them
           if (user) {
             const currentUserRef = doc(db, "users", user.uid);
             const currentUserSnap = await getDoc(currentUserRef);
@@ -73,7 +69,6 @@ export default function Account() {
       const profileRef = doc(db, "users", profile.uid);
 
       if (isFollowing) {
-        // Unfollow
         await updateDoc(currentUserRef, {
           following: arrayRemove(profile.uid),
         });
@@ -86,7 +81,6 @@ export default function Account() {
           followers: prev.followers.filter((id) => id !== user.uid),
         }));
       } else {
-        // Follow
         await updateDoc(currentUserRef, {
           following: arrayUnion(profile.uid),
         });
@@ -104,13 +98,8 @@ export default function Account() {
     }
   };
 
-  if (loading) {
-    return <div className="text-center mt-20 text-white">Loading...</div>;
-  }
-
-  if (!profile) {
-    return <div className="text-center mt-20 text-white">User not found</div>;
-  }
+  if (loading) return <div className="text-center mt-20 text-white">Loading...</div>;
+  if (!profile) return <div className="text-center mt-20 text-white">User not found</div>;
 
   const isOwnProfile = user && user.uid === profile.uid;
 
