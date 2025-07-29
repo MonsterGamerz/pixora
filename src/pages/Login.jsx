@@ -12,14 +12,14 @@ export default function Login() {
 
   const handleLogin = async (e) => {
     e.preventDefault();
-    setError(''); // clear previous errors
+    setError('');
 
     try {
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
-      console.log('Logged in:', userCredential.user); // ✅ for debug
-      navigate('/'); // 🔁 redirect after login
+      console.log('✅ Logged in:', userCredential.user);
+      navigate('/'); // redirect after login
     } catch (err) {
-      console.error('Login error:', err); // ✅ for debug
+      console.error('❌ Login error:', err.message);
       setError('Invalid credentials. Please try again.');
     }
   };
