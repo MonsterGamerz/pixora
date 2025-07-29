@@ -15,14 +15,12 @@ export default function Signup() {
   const handleSignup = async (e) => {
     e.preventDefault();
     try {
-      // create auth user
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
 
-      // update displayName
       await updateProfile(user, { displayName: username });
 
-      // save main user profile
+      // Save user profile
       await setDoc(doc(db, 'users', user.uid), {
         email,
         username,
@@ -33,7 +31,7 @@ export default function Signup() {
         photoURL: '',
       });
 
-      // save username → uid mapping
+      // Map username → uid
       await setDoc(doc(db, 'usernames', username), {
         uid: user.uid,
       });
@@ -54,7 +52,7 @@ export default function Signup() {
           placeholder="Username"
           className="w-full p-2 rounded bg-gray-800 border border-gray-700 text-white placeholder-gray-400"
           value={username}
-          onChange={(e) => setUsername(e.target.value.toLowerCase())}
+          onChange={(e) => setUsername(e.target.value)}
           required
         />
 
