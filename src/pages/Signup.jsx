@@ -1,46 +1,50 @@
 // src/pages/Signup.jsx
-import React, { useState } from 'react';
-import { auth, db } from '../firebase';
-import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
-import { doc, setDoc } from 'firebase/firestore';
-import { Link, useNavigate } from 'react-router-dom';
+import React, { useState } from 'react'
+import { auth, db } from '../firebase'
+import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth'
+import { doc, setDoc } from 'firebase/firestore'
+import { Link, useNavigate } from 'react-router-dom'
 
 export default function Signup() {
-  const [email, setEmail] = useState('');
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
-  const navigate = useNavigate();
+  const [email, setEmail] = useState('')
+  const [username, setUsername] = useState('')
+  const [password, setPassword] = useState('')
+  const [error, setError] = useState('')
+  const navigate = useNavigate()
 
   const handleSignup = async (e) => {
-    e.preventDefault();
+    e.preventDefault()
     try {
-      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-      const user = userCredential.user;
+      // Create user
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password)
+      const user = userCredential.user
 
-      await updateProfile(user, { displayName: username });
+      // Set display name
+      await updateProfile(user, { displayName: username })
 
-      // Save user profile
+      // Create user doc in "users" collection
       await setDoc(doc(db, 'users', user.uid), {
-        email,
-        username,
         uid: user.uid,
-        followers: [],
-        following: [],
+        username: username,
+        email: email,
         bio: '',
-        photoURL: '',
-      });
+        photoURL: '', // You can set default avatar later
+        followers: [],
+        following: []
+      })
 
-      // Map username → uid
+      // Create username mapping in "usernames" collection
       await setDoc(doc(db, 'usernames', username), {
-        uid: user.uid,
-      });
+        uid: user.uid
+      })
 
-      navigate('/');
+      // Redirect to home
+      navigate('/')
     } catch (err) {
-      setError(err.message);
+      console.error('Signup error:', err)
+      setError('Signup failed. Try a different email/username.')
     }
-  };
+  }
 
   return (
     <div className="flex items-center justify-center min-h-screen bg-black text-white">
@@ -91,5 +95,5 @@ export default function Signup() {
         </p>
       </form>
     </div>
-  );
+  )
 }
