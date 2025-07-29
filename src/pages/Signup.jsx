@@ -1,10 +1,9 @@
 // src/pages/Signup.jsx
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { auth, db } from '../firebase';
 import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
 import { doc, setDoc } from 'firebase/firestore';
 import { Link, useNavigate } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
 
 export default function Signup() {
   const [email, setEmail] = useState('');
@@ -12,27 +11,31 @@ export default function Signup() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const navigate = useNavigate();
-  const { user } = useAuth();
-
-  // 🚀 redirect if already logged in
-  useEffect(() => {
-    if (user) navigate('/');
-  }, [user, navigate]);
 
   const handleSignup = async (e) => {
     e.preventDefault();
     try {
+      // create auth user
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-      const newUser = userCredential.user;
+      const user = userCredential.user;
 
-      await updateProfile(newUser, { displayName: username });
-      await setDoc(doc(db, 'users', newUser.uid), {
+      // update displayName
+      await updateProfile(user, { displayName: username });
+
+      // save main user profile
+      await setDoc(doc(db, 'users', user.uid), {
         email,
         username,
-        uid: newUser.uid,
+        uid: user.uid,
         followers: [],
         following: [],
         bio: '',
+        photoURL: '',
+      });
+
+      // save username → uid mapping
+      await setDoc(doc(db, 'usernames', username), {
+        uid: user.uid,
       });
 
       navigate('/');
@@ -51,7 +54,7 @@ export default function Signup() {
           placeholder="Username"
           className="w-full p-2 rounded bg-gray-800 border border-gray-700 text-white placeholder-gray-400"
           value={username}
-          onChange={(e) => setUsername(e.target.value)}
+          onChange={(e) => setUsername(e.target.value.toLowerCase())}
           required
         />
 
