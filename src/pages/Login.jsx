@@ -1,25 +1,28 @@
 // src/pages/Login.jsx
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { signInWithEmailAndPassword } from 'firebase/auth';
 import { auth } from '../firebase';
 import { useNavigate, Link } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 
 export default function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const navigate = useNavigate();
+  const { user } = useAuth();
+
+  // 🚀 redirect if already logged in
+  useEffect(() => {
+    if (user) navigate('/');
+  }, [user, navigate]);
 
   const handleLogin = async (e) => {
     e.preventDefault();
-    setError('');
-
     try {
-      const userCredential = await signInWithEmailAndPassword(auth, email, password);
-      console.log('✅ Logged in:', userCredential.user);
-      navigate('/'); // redirect after login
+      await signInWithEmailAndPassword(auth, email, password);
+      navigate('/');
     } catch (err) {
-      console.error('❌ Login error:', err.message);
       setError('Invalid credentials. Please try again.');
     }
   };
