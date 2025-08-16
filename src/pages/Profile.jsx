@@ -1,19 +1,16 @@
-// src/pages/Profile.jsx
-import React, { useEffect, useState } from 'react'
-import { useParams } from 'react-router-dom'
-import { db, auth } from '../firebase'
+import { useEffect, useState } from "react"
+import { useParams } from "react-router-dom"
+import { db } from "../firebase"
 import {
-  doc,
-  getDoc,
   collection,
+  doc,
   getDocs,
   query,
-  where
-} from 'firebase/firestore'
-import FollowButton from '../components/FollowButton'
+  where,
+} from "firebase/firestore"
 
 export default function Profile() {
-  const { uid } = useParams()
+  const { username } = useParams()
   const [userData, setUserData] = useState(null)
   const [posts, setPosts] = useState([])
   const [loading, setLoading] = useState(true)
@@ -22,103 +19,57 @@ export default function Profile() {
   useEffect(() => {
     const fetchProfile = async () => {
       try {
-        // Get user data
-        const ref = doc(db, 'users', uid)
-        const snap = await getDoc(ref)
-        if (snap.exists()) {
-          setUserData(snap.data())
+        // 1. Find user by username
+        const q = query(collection(db, "users"), where("username", "==", username))
+        const snap = await getDocs(q)
+
+        if (!snap.empty) {
+          const userDoc = snap.docs[0]
+          setUserData({ id: userDoc.id, ...userDoc.data() })
+
+          // 2. Fetch posts by that user’s UID
+          const postsQ = query(
+            collection(db, "posts"),
+            where("uid", "==", userDoc.id)
+          )
+          const postsSnap = await getDocs(postsQ)
+          setPosts(postsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })))
         } else {
           setNotFound(true)
         }
-
-        // Get user posts
-        const q = query(collection(db, 'posts'), where('uid', '==', uid))
-        const postsSnap = await getDocs(q)
-        setPosts(postsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })))
       } catch (err) {
-        console.error('Error loading profile:', err)
+        console.error("Error loading profile:", err)
         setNotFound(true)
       }
       setLoading(false)
     }
 
     fetchProfile()
-  }, [uid])
+  }, [username])
 
-  if (loading) {
-    // Shimmer while loading
-    return (
-      <div className="text-center mt-8">
-        <div className="animate-pulse w-32 h-32 bg-gray-300 rounded-full mx-auto mb-4"></div>
-        <div className="w-2/3 mx-auto bg-gray-300 h-6 mb-4"></div>
-        <div className="w-1/3 mx-auto bg-gray-300 h-6"></div>
-      </div>
-    )
-  }
-
-  if (notFound) {
-    return (
-      <div className="text-center mt-10 text-red-500 font-bold text-xl">
-        User not found
-      </div>
-    )
-  }
+  if (loading) return <p>Loading...</p>
+  if (notFound) return <p>User not found</p>
 
   return (
-    <div className="p-6 max-w-xl mx-auto text-center">
-      {/* Profile Picture */}
-      <div className="mb-4">
-        {userData.photoURL ? (
-          <img
-            src={userData.photoURL}
-            alt="Profile"
-            className="w-24 h-24 rounded-full mx-auto object-cover"
-          />
-        ) : (
-          <div className="w-24 h-24 bg-gray-300 rounded-full mx-auto"></div>
-        )}
-      </div>
+    <div className="p-4">
+      {userData && (
+        <>
+          <h2 className="text-xl font-bold">@{userData.username}</h2>
+          <p>{userData.bio || "No bio yet"}</p>
 
-      {/* User Info */}
-      <h1 className="text-2xl font-bold">{userData.username}</h1>
-      <p className="text-gray-500">{userData.bio}</p>
-
-      {/* Followers / Following */}
-      <div className="flex justify-center gap-8 my-4">
-        <div>
-          <strong>{userData.followers?.length || 0}</strong> Followers
-        </div>
-        <div>
-          <strong>{userData.following?.length || 0}</strong> Following
-        </div>
-      </div>
-
-      {/* Follow Button */}
-      {auth.currentUser?.uid !== uid && <FollowButton targetId={uid} />}
-
-      {/* Edit Profile Button */}
-      {auth.currentUser?.uid === uid && (
-        <button className="mt-4 px-4 py-2 bg-blue-500 text-white rounded">
-          Edit Profile
-        </button>
-      )}
-
-      {/* User's Posts */}
-      <h2 className="text-xl font-semibold mt-6 mb-3">Posts</h2>
-      {posts.length === 0 ? (
-        <p className="text-gray-500">No posts yet.</p>
-      ) : (
-        <div className="grid grid-cols-3 gap-2">
-          {posts.map(post => (
-            <div key={post.id}>
-              <img
-                src={post.imageUrl}
-                alt="Post"
-                className="w-full aspect-square object-cover rounded"
-              />
-            </div>
-          ))}
-        </div>
+          <h3 className="mt-4 text-lg font-semibold">Posts</h3>
+          {posts.length > 0 ? (
+            <ul>
+              {posts.map(post => (
+                <li key={post.id} className="border-b py-2">
+                  {post.caption || "No caption"}
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p>No posts yet</p>
+          )}
+        </>
       )}
     </div>
   )
