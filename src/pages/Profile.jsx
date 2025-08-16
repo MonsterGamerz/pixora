@@ -1,10 +1,10 @@
+// src/pages/Profile.jsx
 import React, { useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { db, auth } from '../firebase'
 import {
   doc,
   getDoc,
-  updateDoc,
   collection,
   getDocs,
   query,
@@ -16,32 +16,50 @@ export default function Profile() {
   const { uid } = useParams()
   const [userData, setUserData] = useState(null)
   const [posts, setPosts] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [notFound, setNotFound] = useState(false)
 
   useEffect(() => {
     const fetchProfile = async () => {
-      // Get user data
-      const ref = doc(db, 'users', uid)
-      const snap = await getDoc(ref)
-      if (snap.exists()) {
-        setUserData(snap.data())
-      }
+      try {
+        // Get user data
+        const ref = doc(db, 'users', uid)
+        const snap = await getDoc(ref)
+        if (snap.exists()) {
+          setUserData(snap.data())
+        } else {
+          setNotFound(true)
+        }
 
-      // Get user posts
-      const q = query(collection(db, 'posts'), where('uid', '==', uid))
-      const postsSnap = await getDocs(q)
-      setPosts(postsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })))
+        // Get user posts
+        const q = query(collection(db, 'posts'), where('uid', '==', uid))
+        const postsSnap = await getDocs(q)
+        setPosts(postsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })))
+      } catch (err) {
+        console.error('Error loading profile:', err)
+        setNotFound(true)
+      }
+      setLoading(false)
     }
 
     fetchProfile()
   }, [uid])
 
-  if (!userData) {
-    // Display shimmer or loading message while fetching user data
+  if (loading) {
+    // Shimmer while loading
     return (
       <div className="text-center mt-8">
         <div className="animate-pulse w-32 h-32 bg-gray-300 rounded-full mx-auto mb-4"></div>
         <div className="w-2/3 mx-auto bg-gray-300 h-6 mb-4"></div>
         <div className="w-1/3 mx-auto bg-gray-300 h-6"></div>
+      </div>
+    )
+  }
+
+  if (notFound) {
+    return (
+      <div className="text-center mt-10 text-red-500 font-bold text-xl">
+        User not found
       </div>
     )
   }
@@ -76,9 +94,7 @@ export default function Profile() {
       </div>
 
       {/* Follow Button */}
-      {auth.currentUser?.uid !== uid && (
-        <FollowButton targetId={uid} />
-      )}
+      {auth.currentUser?.uid !== uid && <FollowButton targetId={uid} />}
 
       {/* Edit Profile Button */}
       {auth.currentUser?.uid === uid && (
