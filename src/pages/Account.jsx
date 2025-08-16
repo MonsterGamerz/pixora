@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { db } from "../firebase";
-import { doc, getDoc } from "firebase/firestore";
+import { doc, getDoc, updateDoc } from "firebase/firestore";
 
 const Account = () => {
   const { uid } = useParams();
@@ -15,11 +15,15 @@ const Account = () => {
         const userSnap = await getDoc(userRef);
 
         if (userSnap.exists()) {
-          const data = userSnap.data();
+          let data = userSnap.data();
 
-          // Fallback: if username is missing, use displayName or email
+          // If username missing (old users), create fallback + save it in Firestore
           if (!data.username) {
-            data.username = data.displayName || data.email?.split("@")[0] || "Unknown User";
+            const fallbackUsername =
+              data.displayName || data.email?.split("@")[0] || "UnknownUser";
+
+            await updateDoc(userRef, { username: fallbackUsername }); // 🔥 save it permanently
+            data.username = fallbackUsername;
           }
 
           setUserData(data);
