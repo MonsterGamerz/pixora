@@ -2,7 +2,7 @@
 import React, { useState } from "react";
 import { auth, db } from "../firebase";
 import { createUserWithEmailAndPassword, updateProfile } from "firebase/auth";
-import { doc, setDoc } from "firebase/firestore";
+import { doc, setDoc, getDoc } from "firebase/firestore";
 import { Link, useNavigate } from "react-router-dom";
 
 export default function Signup() {
@@ -15,7 +15,21 @@ export default function Signup() {
   const handleSignup = async (e) => {
     e.preventDefault();
     try {
-      // Create user
+      // ✅ Normalize username
+      const cleanUsername = username
+        .trim()
+        .toLowerCase()
+        .replace(/\s+/g, "_");
+
+      // 🚨 Check if username is already taken
+      const usernameRef = doc(db, "usernames", cleanUsername);
+      const usernameSnap = await getDoc(usernameRef);
+      if (usernameSnap.exists()) {
+        setError("Username already taken. Choose another one.");
+        return;
+      }
+
+      // ✅ Create user
       const userCredential = await createUserWithEmailAndPassword(
         auth,
         email,
@@ -23,13 +37,7 @@ export default function Signup() {
       );
       const user = userCredential.user;
 
-      // ✅ Normalize username
-      const cleanUsername = username
-        .trim()
-        .toLowerCase()
-        .replace(/\s+/g, "_"); // spaces -> underscores
-
-      // Set Firebase Auth displayName
+      // ✅ Set Firebase Auth displayName
       await updateProfile(user, { displayName: cleanUsername });
 
       // ✅ Create user in "users"
@@ -44,15 +52,13 @@ export default function Signup() {
       });
 
       // ✅ Create username → uid mapping
-      await setDoc(doc(db, "usernames", cleanUsername), {
-        uid: user.uid,
-      });
+      await setDoc(usernameRef, { uid: user.uid });
 
-      // Redirect home
+      // ✅ Redirect home
       navigate("/");
     } catch (err) {
       console.error("Signup error:", err);
-      setError("Signup failed. Try a different email/username.");
+      setError("Signup failed. Try again.");
     }
   };
 
