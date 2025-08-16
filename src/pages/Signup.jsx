@@ -23,24 +23,27 @@ export default function Signup() {
       );
       const user = userCredential.user;
 
-      // ✅ Sanitize username for Firestore doc ID
-      const cleanUsername = username.trim().toLowerCase().replace(/\s+/g, "_");
+      // ✅ Normalize username
+      const cleanUsername = username
+        .trim()
+        .toLowerCase()
+        .replace(/\s+/g, "_"); // spaces -> underscores
 
-      // Update displayName
+      // Set Firebase Auth displayName
       await updateProfile(user, { displayName: cleanUsername });
 
-      // Add user to "users" collection
+      // ✅ Create user in "users"
       await setDoc(doc(db, "users", user.uid), {
         uid: user.uid,
         username: cleanUsername,
-        email: email,
+        email,
         bio: "",
-        photoURL: "", // default placeholder
+        photoURL: "",
         followers: [],
         following: [],
       });
 
-      // Add username mapping
+      // ✅ Create username → uid mapping
       await setDoc(doc(db, "usernames", cleanUsername), {
         uid: user.uid,
       });
