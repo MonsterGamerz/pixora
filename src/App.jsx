@@ -1,3 +1,4 @@
+// src/App.jsx
 import React from "react";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import { AuthProvider, useAuth } from "./context/AuthContext";
@@ -12,6 +13,7 @@ import CommentsPage from "./pages/CommentsPage";
 import Search from "./pages/Search";
 import Chat from "./pages/Chat";
 import Account from "./pages/Account";
+import Accounts from "./pages/Accounts"; // ✅ new list page
 import EditProfile from "./pages/EditProfile";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
@@ -25,9 +27,11 @@ function AppLayout() {
   return (
     <div className="min-h-screen flex flex-col bg-white dark:bg-black text-black dark:text-white">
       <Routes>
+        {/* Public routes */}
         <Route path="/login" element={<Login />} />
         <Route path="/signup" element={<Signup />} />
 
+        {/* Protected routes */}
         <Route
           path="/"
           element={
@@ -84,8 +88,18 @@ function AppLayout() {
             </ProtectedRoute>
           }
         />
+        {/* ✅ list of all users */}
         <Route
-          path="/account/:username"
+          path="/accounts"
+          element={
+            <ProtectedRoute>
+              <Accounts />
+            </ProtectedRoute>
+          }
+        />
+        {/* ✅ profile by uid */}
+        <Route
+          path="/profile/:uid"
           element={
             <ProtectedRoute>
               <Account />
