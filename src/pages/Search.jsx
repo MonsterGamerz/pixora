@@ -1,85 +1,78 @@
-// src/pages/Search.jsx
-import React, { useState, useEffect } from 'react';
-import { db } from '../firebase';
-import { collection, getDocs } from 'firebase/firestore';
-import { Link } from 'react-router-dom';
+import React, { useState } from "react";
+import { collection, query, where, getDocs } from "firebase/firestore";
+import { db } from "../firebase"; // adjust path if needed
+import { Link } from "react-router-dom";
 
-const SearchPage = () => {
-  const [search, setSearch] = useState('');
-  const [allUsers, setAllUsers] = useState([]);
-  const [filteredUsers, setFilteredUsers] = useState([]);
+const Search = () => {
+  const [searchInput, setSearchInput] = useState("");
+  const [results, setResults] = useState([]);
+  const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
-    const fetchUsers = async () => {
-      const snapshot = await getDocs(collection(db, 'users'));
-      const users = snapshot.docs.map(doc => ({
-        uid: doc.id,
-        ...doc.data(),
-      }));
+  const handleSearch = async (e) => {
+    e.preventDefault();
+    if (!searchInput.trim()) return;
 
-      // Add fallbacks
-      const cleanedUsers = users.map(user => ({
-        ...user,
-        username: user.username || user.displayName || user.email?.split('@')[0] || "Unknown User",
-        profilePic: user.profilePic || '/default-avatar.png',
-      }));
+    setLoading(true);
+    try {
+      const q = query(
+        collection(db, "users"),
+        where("username", ">=", searchInput.toLowerCase()),
+        where("username", "<=", searchInput.toLowerCase() + "\uf8ff")
+      );
 
-      setAllUsers(cleanedUsers);
-    };
-    fetchUsers();
-  }, []);
+      const querySnapshot = await getDocs(q);
+      const users = [];
+      querySnapshot.forEach((doc) => {
+        users.push({ id: doc.id, ...doc.data() });
+      });
 
-  useEffect(() => {
-    const s = search.toLowerCase();
-    const results = allUsers.filter(user =>
-      user.username?.toLowerCase().includes(s)
-    );
-    setFilteredUsers(results);
-  }, [search, allUsers]);
+      setResults(users);
+    } catch (error) {
+      console.error("Error searching users:", error);
+    }
+    setLoading(false);
+  };
 
   return (
-    <div className="max-w-md mx-auto p-4">
-      <h2 className="text-2xl font-bold mb-4 text-center dark:text-white">
-        Search Users
-      </h2>
+    <div className="p-4 max-w-md mx-auto">
+      <form onSubmit={handleSearch} className="flex gap-2 mb-4">
+        <input
+          type="text"
+          placeholder="Search username..."
+          value={searchInput}
+          onChange={(e) => setSearchInput(e.target.value)}
+          className="flex-1 p-2 border rounded-lg"
+        />
+        <button
+          type="submit"
+          className="bg-blue-500 text-white px-4 rounded-lg hover:bg-blue-600"
+        >
+          Search
+        </button>
+      </form>
 
-      <input
-        type="text"
-        placeholder="Search by username..."
-        value={search}
-        onChange={(e) => setSearch(e.target.value)}
-        className="w-full p-2 mb-4 border rounded-xl dark:bg-gray-800 dark:text-white"
-      />
+      {loading && <p>Searching...</p>}
 
-      <div className="space-y-3">
-        {filteredUsers.map((user) => (
-          <Link
-            to={`/account/${user.uid}`}  // ✅ matches Profile.jsx (uses uid)
-            key={user.uid}
-            className="flex items-center gap-3 p-2 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition"
-          >
-            <img
-              src={user.profilePic}
-              alt="Profile"
-              className="w-12 h-12 rounded-full object-cover"
-            />
-            <div>
-              <p className="font-semibold dark:text-white">{user.username}</p>
-              {user.bio && (
-                <p className="text-sm text-gray-500 dark:text-gray-400 line-clamp-1">
-                  {user.bio}
-                </p>
-              )}
-            </div>
-          </Link>
-        ))}
-
-        {filteredUsers.length === 0 && (
-          <p className="text-center text-gray-500 dark:text-gray-400">
-            No users found.
-          </p>
-        )}
-      </div>
+      {results.length > 0 ? (
+        <ul className="space-y-2">
+          {results.map((user) => (
+            <li
+              key={user.id}
+              className="flex items-center justify-between p-2 border rounded-lg"
+            >
+              <span>@{user.username}</span>
+              <Link
+                to={`/account/${user.id}`}
+                className="text-blue-500 hover:underline"
+              >
+                View
+              </Link>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        !loading && <p>No users found</p>
+      )}
     </div>
   );
 };
