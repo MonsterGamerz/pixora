@@ -1,9 +1,10 @@
 // src/pages/Login.jsx
 import React, { useState, useEffect } from 'react';
 import { signInWithEmailAndPassword } from 'firebase/auth';
-import { auth } from '../firebase';
+import { auth, db } from '../firebase';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { doc, getDoc } from 'firebase/firestore';
 
 export default function Login() {
   const [email, setEmail] = useState('');
@@ -14,14 +15,37 @@ export default function Login() {
 
   // 🚀 redirect if already logged in
   useEffect(() => {
-    if (user) navigate('/');
+    const redirectIfLoggedIn = async () => {
+      if (user) {
+        // look up user doc to see if username exists
+        const userRef = doc(db, "users", user.uid);
+        const userSnap = await getDoc(userRef);
+
+        if (userSnap.exists()) {
+          navigate(`/account/${user.uid}`);
+        } else {
+          navigate("/");
+        }
+      }
+    };
+
+    redirectIfLoggedIn();
   }, [user, navigate]);
 
   const handleLogin = async (e) => {
     e.preventDefault();
     try {
-      await signInWithEmailAndPassword(auth, email, password);
-      navigate('/');
+      const res = await signInWithEmailAndPassword(auth, email, password);
+
+      // fetch user profile after login
+      const userRef = doc(db, "users", res.user.uid);
+      const userSnap = await getDoc(userRef);
+
+      if (userSnap.exists()) {
+        navigate(`/account/${res.user.uid}`);
+      } else {
+        navigate("/");
+      }
     } catch (err) {
       setError('Invalid credentials. Please try again.');
     }
